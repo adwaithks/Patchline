@@ -14,7 +14,7 @@ import type { DiffLayoutMode } from "@/types/diff-layout";
 function AppContent() {
 	const { data, selectedFile } = useProject();
 	const { open } = useSidebar();
-	const [diffLayout, setDiffLayout] = useState<DiffLayoutMode>("split");
+	const [diffLayout, setDiffLayout] = useState<DiffLayoutMode>("unified");
 
 	return (
 		<SidebarInset className="flex flex-col h-svh overflow-hidden">
