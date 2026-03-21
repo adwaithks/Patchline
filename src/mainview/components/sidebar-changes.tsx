@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useProject } from "@/context/project-context";
 import { FileIcon } from "@/lib/file-icon";
-import type { FileChange } from "../../shared/types";
+import { getGeodesicRPC } from "@/lib/geodesic-rpc";
+import type { DiffScope, FileChange } from "../../shared/types";
 
 interface SidebarChangesProps {
 	changes: FileChange[];
@@ -26,11 +27,13 @@ function splitPath(fullPath: string): { name: string; dir: string } {
 
 function FileList({
 	items,
+	diffScope,
 	actionIcon,
 	actionTitle,
 	onAction,
 }: {
 	items: FileChange[];
+	diffScope: DiffScope;
 	actionIcon: React.ReactNode;
 	actionTitle: string;
 	onAction: (f: FileChange) => void;
@@ -41,11 +44,14 @@ function FileList({
 			{items.map((item) => {
 				const { name, dir } = splitPath(item.path);
 				return (
-					<SidebarMenuItem key={item.path}>
+					<SidebarMenuItem key={`${item.path}-${diffScope}`}>
 						<SidebarMenuButton
 							className="pr-8 items-center"
-							isActive={selectedFile?.path === item.path}
-							onClick={() => selectFile(item)}
+							isActive={
+								selectedFile?.path === item.path &&
+								selectedFile?.diffScope === diffScope
+							}
+							onClick={() => selectFile({ ...item, diffScope })}
 						>
 							<FileIcon path={item.path} className="shrink-0" />
 							<span className="truncate font-medium">{name}</span>
@@ -75,15 +81,13 @@ function FileList({
 export function SidebarChanges({ changes }: SidebarChangesProps) {
 	const { refresh } = useProject();
 
-	const rpc = () => (window as any).__geodesicRPC;
-
 	async function stage(f: FileChange) {
-		await rpc()?.request.stageFile({ filePath: f.path });
+		await getGeodesicRPC()?.request.stageFile({ filePath: f.path });
 		refresh();
 	}
 
 	async function unstage(f: FileChange) {
-		await rpc()?.request.unstageFile({ filePath: f.path });
+		await getGeodesicRPC()?.request.unstageFile({ filePath: f.path });
 		refresh();
 	}
 
@@ -117,6 +121,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 					<SidebarGroupContent>
 						<FileList
 							items={staged}
+							diffScope="staged"
 							actionIcon={<Minus className="size-3" />}
 							actionTitle="Unstage"
 							onAction={unstage}
@@ -132,6 +137,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 					<SidebarGroupContent>
 						<FileList
 							items={unstaged}
+							diffScope="unstaged"
 							actionIcon={<Plus className="size-3" />}
 							actionTitle="Stage"
 							onAction={stage}

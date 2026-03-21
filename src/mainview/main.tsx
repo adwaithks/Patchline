@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
 import { ProjectProvider } from "./context/project-context";
+import type { GeodesicRpcClient } from "@/lib/geodesic-rpc";
 
 const LOG = "[geodesic:webview]";
 
@@ -18,7 +19,7 @@ async function init() {
 				handlers: { requests: {}, messages: {} },
 			});
 			new Electroview({ rpc });
-			(window as any).__geodesicRPC = rpc;
+			window.__geodesicRPC = rpc as GeodesicRpcClient;
 			console.log(`${LOG} RPC ready (Electroview + __geodesicRPC set)`);
 		} catch (err) {
 			console.error(`${LOG} RPC bootstrap failed`, err);

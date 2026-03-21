@@ -8,8 +8,15 @@ export type FileChange = {
 	worktreeState: " " | "M" | "A" | "D" | "R" | "C" | "U" | "?";
 };
 
-// Recursive tree node: either a file (string) or a folder ([name, ...children])
-export type TreeNode = string | [string, ...TreeNode[]];
+/** Which sidebar bucket the user opened the diff from (matters when a file is both staged and unstaged, i.e. MM). */
+export type DiffScope = "staged" | "unstaged";
+
+export type SelectedFileChange = FileChange & { diffScope: DiffScope };
+
+/** File tree entry — discriminated union for clearer UI + future metadata. */
+export type TreeNode =
+	| { type: "file"; name: string }
+	| { type: "dir"; name: string; children: TreeNode[] };
 
 export type FileDiff = {
 	filePath: string;
@@ -30,7 +37,7 @@ export type GeodesicRPCType = {
 				};
 			};
 			getFileDiff: {
-				params: { filePath: string };
+				params: { filePath: string; diffScope: DiffScope };
 				response: FileDiff;
 			};
 			stageFile: {

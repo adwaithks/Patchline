@@ -39,16 +39,16 @@ function AppContent() {
 						}
 						className="electrobun-webkit-app-region-no-drag shrink-0"
 					>
-						<TabsList className="h-8 rounded-xl gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
+						<TabsList className="h-6 rounded-lg gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
 							<TabsTrigger
 								value="split"
-								className="rounded-lg h-6 px-2.5 text-[10px] font-medium text-zinc-400 data-[state=active]:bg-zinc-200 data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:shadow-none"
+								className="rounded-md h-5 px-2.5 text-[10px] font-medium text-zinc-400 data-[state=active]:bg-zinc-200 data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:shadow-none"
 							>
 								Split
 							</TabsTrigger>
 							<TabsTrigger
 								value="unified"
-								className="rounded-lg h-6 px-2.5 text-[10px] font-medium text-zinc-400 data-[state=active]:bg-zinc-200 data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:shadow-none"
+								className="rounded-md h-5 px-2.5 text-[10px] font-medium text-zinc-400 data-[state=active]:bg-zinc-200 data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm data-[state=inactive]:bg-transparent data-[state=inactive]:shadow-none"
 							>
 								Unified
 							</TabsTrigger>

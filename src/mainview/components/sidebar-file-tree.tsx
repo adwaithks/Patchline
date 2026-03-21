@@ -37,7 +37,7 @@ export function SidebarFileTree({ tree }: SidebarFileTreeProps) {
 			<SidebarGroupContent>
 				<SidebarMenu>
 					{tree.map((item, index) => (
-						<TreeNode key={index} item={item} />
+						<FileTreeNode key={index} node={item} />
 					))}
 				</SidebarMenu>
 			</SidebarGroupContent>
@@ -45,34 +45,30 @@ export function SidebarFileTree({ tree }: SidebarFileTreeProps) {
 	);
 }
 
-function TreeNode({ item }: { item: TreeNode }) {
-	const [name, ...items] = Array.isArray(item) ? item : [item];
-
-	if (!items.length) {
+function FileTreeNode({ node }: { node: TreeNode }) {
+	if (node.type === "file") {
 		return (
 			<SidebarMenuButton className="data-[active=true]:bg-transparent">
-				<FileIcon path={name} />
-				<span className="truncate">{name}</span>
+				<FileIcon path={node.name} />
+				<span className="truncate">{node.name}</span>
 			</SidebarMenuButton>
 		);
 	}
 
 	return (
 		<SidebarMenuItem>
-			<Collapsible
-				className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-			>
+			<Collapsible className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90">
 				<CollapsibleTrigger asChild>
 					<SidebarMenuButton>
 						<ChevronRight className="transition-transform" />
 						<Folder />
-						<span className="truncate">{name}</span>
+						<span className="truncate">{node.name}</span>
 					</SidebarMenuButton>
 				</CollapsibleTrigger>
 				<CollapsibleContent>
 					<SidebarMenuSub>
-						{(items as TreeNode[]).map((subItem, index) => (
-							<TreeNode key={index} item={subItem} />
+						{node.children.map((child, index) => (
+							<FileTreeNode key={index} node={child} />
 						))}
 					</SidebarMenuSub>
 				</CollapsibleContent>

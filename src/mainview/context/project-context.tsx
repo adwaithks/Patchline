@@ -6,14 +6,14 @@ import {
 	type ReactNode,
 } from "react";
 import { useProjectData, type ProjectData } from "@/hooks/use-project-data";
-import type { FileChange } from "../../shared/types";
+import type { SelectedFileChange } from "../../shared/types";
 
 type ProjectContextValue = {
 	data: ProjectData | null;
 	loading: boolean;
 	error: string | null;
-	selectedFile: FileChange | null;
-	selectFile: (file: FileChange | null) => void;
+	selectedFile: SelectedFileChange | null;
+	selectFile: (file: SelectedFileChange | null) => void;
 	refresh: () => void;
 };
 
@@ -30,22 +30,29 @@ const LOG = "[geodesic:webview]";
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
 	const projectData = useProjectData();
-	const [selectedFile, setSelectedFile] = useState<FileChange | null>(null);
+	const [selectedFile, setSelectedFile] = useState<SelectedFileChange | null>(
+		null,
+	);
 
-	const selectFile = useCallback((file: FileChange | null) => {
+	const selectFile = useCallback((file: SelectedFileChange | null) => {
 		if (file) {
-			console.log(`${LOG} selectFile`, { path: file.path });
+			console.log(`${LOG} selectFile`, {
+				path: file.path,
+				diffScope: file.diffScope,
+			});
 		}
 		setSelectedFile(file);
 	}, []);
 
 	return (
-		<ProjectContext.Provider value={{
-			...projectData,
-			selectedFile,
-			selectFile,
-			refresh: projectData.refresh,
-		}}>
+		<ProjectContext.Provider
+			value={{
+				...projectData,
+				selectedFile,
+				selectFile,
+				refresh: projectData.refresh,
+			}}
+		>
 			{children}
 		</ProjectContext.Provider>
 	);

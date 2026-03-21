@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { getGeodesicRPC } from "@/lib/geodesic-rpc";
 import type { TreeNode, FileChange } from "../../shared/types";
 
 const LOG = "[geodesic:webview]";
@@ -17,9 +18,11 @@ export function useProjectData() {
 	const load = useCallback(async () => {
 		console.log(`${LOG} useProjectData: fetching project…`);
 		try {
-			const rpc = (window as any).__geodesicRPC;
+			const rpc = getGeodesicRPC();
 			if (!rpc) {
-				console.log(`${LOG} useProjectData: no RPC — using empty dev preview data`);
+				console.log(
+					`${LOG} useProjectData: no RPC — using empty dev preview data`,
+				);
 				setData({ sourcePath: "(dev preview)", tree: [], changes: [] });
 				return;
 			}
@@ -39,7 +42,9 @@ export function useProjectData() {
 		}
 	}, []);
 
-	useEffect(() => { load(); }, [load]);
+	useEffect(() => {
+		load();
+	}, [load]);
 
 	return { data, loading, error, refresh: load };
 }

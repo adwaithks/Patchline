@@ -1,30 +1,27 @@
 import { BrowserWindow, BrowserView, Updater } from "electrobun/bun";
 import { resolve, join } from "path";
-import { readdirSync, statSync, readFileSync } from "fs";
-import type { GeodesicRPCType, TreeNode, FileChange, FileDiff } from "../shared/types";
+import { readdirSync, readFileSync, type Dirent } from "fs";
+import { simpleGit, type SimpleGit } from "simple-git";
+import type {
+	GeodesicRPCType,
+	TreeNode,
+	FileChange,
+	FileDiff,
+	DiffScope,
+} from "../shared/types";
 
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
 
-// ---- Resolve source path ----
-// Electrobun's launcher doesn't forward CLI args to the bun process,
-// so we use the GEODESIC_SOURCE env var instead.
+// Resolve source path
 // Usage:  GEODESIC_SOURCE=/my/project bun run start
-// or add a wrapper script that sets it from --source before launching.
 function getSourcePath(): string {
 	const fromEnv = process.env.GEODESIC_SOURCE;
-	if (fromEnv) return resolve(fromEnv);
-
-	// Fallback: parse --source from argv (works in direct bun invocations)
-	const args = process.argv;
-	const idx = args.indexOf("--source");
-	if (idx !== -1 && args[idx + 1]) {
-		return resolve(args[idx + 1]);
-	}
-
-	// Last resort: use the directory of this script's location,
-	// which in dev mode is the actual project root
-	return resolve(import.meta.dir, "../../");
+	if (!fromEnv)
+		throw new Error(
+			"GEODESIC_SOURCE is not set. Usage: GEODESIC_SOURCE=/my/project bun run start",
+		);
+	return resolve(fromEnv);
 }
 
 const sourcePath = getSourcePath();
@@ -32,149 +29,191 @@ const sourcePath = getSourcePath();
 const BLOG = "[geodesic:bun]";
 console.log(`${BLOG} process starting`, { sourcePath });
 
+/** One git instance for the open project (simple-git wraps the `git` CLI). */
+const repoGit: SimpleGit = simpleGit(sourcePath);
+
 // ---- Build file tree ----
 const IGNORE = new Set([
-	".git", "node_modules", ".DS_Store", "dist", "build",
-	".next", ".nuxt", ".cache", "coverage", "__pycache__",
+	".git",
+	"node_modules",
+	".DS_Store",
+	"dist",
+	"build",
+	".next",
+	".nuxt",
+	".cache",
+	"coverage",
+	"__pycache__",
 ]);
 
-function buildTree(dir: string, rootDir: string): TreeNode[] {
-	let entries: string[];
+function buildTree(dir: string): TreeNode[] {
+	let entries: Dirent[];
 	try {
-		entries = readdirSync(dir).filter((e) => !IGNORE.has(e)).sort((a, b) => {
-			// Folders first
-			const aIsDir = statSync(join(dir, a)).isDirectory();
-			const bIsDir = statSync(join(dir, b)).isDirectory();
-			if (aIsDir && !bIsDir) return -1;
-			if (!aIsDir && bIsDir) return 1;
-			return a.localeCompare(b);
-		});
+		entries = readdirSync(dir, { withFileTypes: true })
+			.filter((e) => !IGNORE.has(e.name))
+			.sort((a, b) => {
+				if (a.isDirectory() && !b.isDirectory()) return -1;
+				if (!a.isDirectory() && b.isDirectory()) return 1;
+				return a.name.localeCompare(b.name);
+			});
 	} catch {
 		return [];
 	}
 
 	return entries.map((entry) => {
-		const fullPath = join(dir, entry);
-		const isDir = statSync(fullPath).isDirectory();
-		if (isDir) {
-			const children = buildTree(fullPath, rootDir);
-			return [entry, ...children] as TreeNode;
+		const fullPath = join(dir, entry.name);
+		if (entry.isDirectory()) {
+			return {
+				type: "dir",
+				name: entry.name,
+				children: buildTree(fullPath),
+			} satisfies TreeNode;
 		}
-		return entry;
+		return { type: "file", name: entry.name } satisfies TreeNode;
 	});
 }
 
-// ---- Read git status ----
-async function getGitChanges(dir: string): Promise<FileChange[]> {
-	try {
-		const proc = Bun.spawn(["git", "status", "--porcelain"], {
-			cwd: dir,
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const text = await new Response(proc.stdout).text();
-		await proc.exited;
+type PorcelainChar = FileChange["indexState"];
 
-		return text
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => {
-				const X = line[0] as FileChange["indexState"];
-				const Y = line[1] as FileChange["worktreeState"];
-				// Handle rename: "R  old -> new" or "R  old\0new"
-				const rawPath = line.slice(3).trim().replace(/^"(.*)"$/, "$1");
-				const path = rawPath.includes(" -> ")
-					? rawPath.split(" -> ")[1]
-					: rawPath;
-				return { path, indexState: X, worktreeState: Y };
-			});
+function normalizePorcelainChar(c: string): PorcelainChar {
+	const ch = (c?.[0] ?? " ") as string;
+	const allowed = new Set([" ", "M", "A", "D", "R", "C", "U", "?"]);
+	return (allowed.has(ch) ? ch : " ") as PorcelainChar;
+}
+
+// Read git status (simple-git parses porcelain into files[])
+async function getGitChanges(git: SimpleGit): Promise<FileChange[]> {
+	try {
+		const status = await git.status();
+		return status.files.map((f) => ({
+			path: f.path,
+			indexState: normalizePorcelainChar(f.index),
+			worktreeState: normalizePorcelainChar(f.working_dir),
+		}));
 	} catch {
 		return [];
 	}
 }
 
-// ---- Stage / unstage ----
-async function runGit(args: string[], cwd: string): Promise<{ ok: boolean }> {
+async function stagePath(
+	git: SimpleGit,
+	filePath: string,
+): Promise<{ ok: boolean }> {
 	try {
-		const proc = Bun.spawn(["git", ...args], {
-			cwd,
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const exit = await proc.exited;
-		return { ok: exit === 0 };
+		await git.add(filePath);
+		return { ok: true };
 	} catch {
 		return { ok: false };
 	}
 }
 
-// ---- Get file diff via git ----
-async function getFileDiff(filePath: string): Promise<FileDiff> {
-	const absPath = join(sourcePath, filePath);
-	console.log(`${BLOG} getFileDiff start`, { filePath, absPath, cwd: sourcePath });
-
-	// Get new content from disk
-	let newContent = "";
+async function unstagePath(
+	git: SimpleGit,
+	filePath: string,
+): Promise<{ ok: boolean }> {
 	try {
-		newContent = readFileSync(absPath, "utf-8");
-	} catch { /* deleted file */ }
-
-	// Check if file is tracked in HEAD (exit 0 = tracked, non-zero = untracked/new)
-	const headCheckProc = Bun.spawn(
-		["git", "cat-file", "-e", `HEAD:${filePath}`],
-		{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
-	);
-	const headCheckExit = await headCheckProc.exited;
-	const isTracked = headCheckExit === 0;
-
-	// Get old content only if tracked
-	let oldContent = "";
-	if (isTracked) {
-		const oldProc = Bun.spawn(
-			["git", "show", `HEAD:${filePath}`],
-			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
-		);
-		oldContent = await new Response(oldProc.stdout).text();
-		await oldProc.exited;
+		await git.reset(["HEAD", "--", filePath]);
+		return { ok: true };
+	} catch {
+		return { ok: false };
 	}
+}
 
-	console.log(`${BLOG} file tracking status`, { isTracked, newContentLen: newContent.length });
+// git diff --no-index always exits 1 when files differ, causing simple-git to throw.
+// The diff output ends up on the error object rather than the return value.
+async function diffNoIndex(filePath: string): Promise<string> {
+	try {
+		await repoGit.raw(["diff", "--no-index", "/dev/null", filePath]);
+		return "";
+	} catch (e: unknown) {
+		return (e as any)?.git?.stdout ?? "";
+	}
+}
+
+async function showHead(filePath: string): Promise<string> {
+	try {
+		return (await repoGit.show([`HEAD:${filePath}`])).replace(/\r\n/g, "\n");
+	} catch {
+		return "";
+	}
+}
+
+/** Staged snapshot (index / next commit), when present */
+async function showIndex(filePath: string): Promise<string> {
+	try {
+		return (await repoGit.raw(["show", `:${filePath}`])).replace(/\r\n/g, "\n");
+	} catch {
+		return "";
+	}
+}
+
+async function getFileDiff(
+	filePath: string,
+	diffScope: DiffScope,
+): Promise<FileDiff> {
+	const absPath = join(sourcePath, filePath);
+
+	const worktree = (() => {
+		try {
+			return readFileSync(absPath, "utf-8");
+		} catch {
+			return "";
+		}
+	})();
+
+	const { files } = await repoGit.status(["--", filePath]);
+	const { index = " ", working_dir = " " } = files[0] ?? {};
+
+	const isUntracked = index === "?" && working_dir === "?";
+	const hasStaged = index !== " " && index !== "?";
+	const hasUnstaged = working_dir !== " ";
+
+	const headContent = await showHead(filePath);
+	const indexContent = isUntracked ? "" : await showIndex(filePath);
 
 	let rawDiff = "";
+	let oldContent = "";
+	let newContent = "";
 
-	if (!isTracked) {
-		// Untracked / new file — diff against /dev/null to show all lines as added
-		const proc = Bun.spawn(
-			["git", "diff", "--no-index", "/dev/null", filePath],
-			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
-		);
-		const out = await new Response(proc.stdout).text();
-		await proc.exited; // exits 1 when files differ — that's expected
-		rawDiff = out.replace(/\r\n/g, "\n");
-		console.log(`${BLOG} git diff --no-index (untracked) done`, { rawLen: rawDiff.length });
+	if (isUntracked) {
+		rawDiff = await diffNoIndex(filePath);
+		oldContent = "";
+		newContent = worktree;
+	} else if (diffScope === "staged" && hasStaged) {
+		try {
+			rawDiff = await repoGit.raw([
+				"diff",
+				"--cached",
+				"HEAD",
+				"--",
+				filePath,
+			]);
+		} catch {
+			rawDiff = "";
+		}
+		oldContent = headContent;
+		newContent = indexContent;
+	} else if (diffScope === "unstaged" && hasUnstaged) {
+		// Worktree vs index (what you’re still editing on top of staging)
+		try {
+			rawDiff = await repoGit.raw(["diff", "--", filePath]);
+		} catch {
+			rawDiff = "";
+		}
+		oldContent = indexContent;
+		newContent = worktree;
 	} else {
-		// Tracked file — diff against HEAD
-		const diffProc = Bun.spawn(
-			["git", "diff", "HEAD", "--", filePath],
-			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
-		);
-		const hunks = await new Response(diffProc.stdout).text();
-		const diffExit = await diffProc.exited;
-		const diffStderr = await new Response(diffProc.stderr).text();
-		if (diffStderr) console.warn(`${BLOG} git diff stderr`, diffStderr.slice(0, 500));
-		console.log(`${BLOG} git diff HEAD done`, { exit: diffExit, rawLen: hunks.length });
-		rawDiff = hunks.replace(/\r\n/g, "\n");
+		rawDiff = "";
+		oldContent = headContent;
+		newContent = worktree;
 	}
 
-	console.log(`${BLOG} getFileDiff done`, {
+	return {
 		filePath,
-		oldContentLen: oldContent.length,
-		newContentLen: newContent.length,
-		rawDiffLen: rawDiff.length,
-		preview: rawDiff.slice(0, 200),
-	});
-
-	return { filePath, oldContent, newContent, hunks: rawDiff };
+		oldContent,
+		newContent,
+		hunks: rawDiff.replace(/\r\n/g, "\n"),
+	};
 }
 
 // ---- RPC ----
@@ -185,8 +224,8 @@ const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 			getProjectData: async () => {
 				console.log(`${BLOG} RPC getProjectData`);
 				const [tree, changes] = await Promise.all([
-					Promise.resolve(buildTree(sourcePath, sourcePath)),
-					getGitChanges(sourcePath),
+					Promise.resolve(buildTree(sourcePath)),
+					getGitChanges(repoGit),
 				]);
 				console.log(`${BLOG} RPC getProjectData →`, {
 					treeRoots: tree.length,
@@ -194,24 +233,23 @@ const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 				});
 				return { sourcePath, tree, changes };
 			},
-			getFileDiff: async ({ filePath }) => {
-				console.log(`${BLOG} RPC getFileDiff`, { filePath });
-				return getFileDiff(filePath);
+			getFileDiff: async ({ filePath, diffScope }) => {
+				console.log(`${BLOG} RPC getFileDiff`, { filePath, diffScope });
+				return getFileDiff(filePath, diffScope);
 			},
 			stageFile: async ({ filePath }) => {
 				console.log(`${BLOG} RPC stageFile`, { filePath });
-				return runGit(["add", filePath], sourcePath);
+				return stagePath(repoGit, filePath);
 			},
 			unstageFile: async ({ filePath }) => {
 				console.log(`${BLOG} RPC unstageFile`, { filePath });
-				return runGit(["reset", "HEAD", "--", filePath], sourcePath);
+				return unstagePath(repoGit, filePath);
 			},
 		},
 		messages: {},
 	},
 });
 
-// ---- Window ----
 async function getMainViewUrl(): Promise<string> {
 	const channel = await Updater.localInfo.channel();
 	if (channel === "dev") {
@@ -227,13 +265,13 @@ async function getMainViewUrl(): Promise<string> {
 
 const url = await getMainViewUrl();
 
-const mainWindow = new BrowserWindow({
+new BrowserWindow({
 	title: `Geodesic — ${sourcePath}`,
 	url,
 	titleBarStyle: "hiddenInset",
 	frame: {
-		width: 900,
-		height: 700,
+		width: 1200,
+		height: 800,
 		x: 200,
 		y: 200,
 	},

@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { DiffView, DiffModeEnum } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view-pure.css";
 import type { DiffLayoutMode } from "@/types/diff-layout";
-import type { FileChange, FileDiff } from "../../shared/types";
+import { getGeodesicRPC } from "@/lib/geodesic-rpc";
+import type { FileDiff, SelectedFileChange } from "../../shared/types";
 
 const LOG = "[geodesic:webview]";
 
 interface DiffViewerProps {
-	file: FileChange;
+	file: SelectedFileChange;
 	layout: DiffLayoutMode;
 }
 
@@ -17,14 +18,17 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		console.log(`${LOG} DiffViewer: effect for file`, { path: file.path });
+		console.log(`${LOG} DiffViewer: effect for file`, {
+			path: file.path,
+			diffScope: file.diffScope,
+		});
 		setLoading(true);
 		setError(null);
 		setDiffData(null);
 
 		async function load() {
 			try {
-				const rpc = (window as any).__geodesicRPC;
+				const rpc = getGeodesicRPC();
 				if (!rpc) {
 					console.warn(`${LOG} DiffViewer: __geodesicRPC missing`);
 					setError("RPC not available");
@@ -32,10 +36,12 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 				}
 				console.log(`${LOG} DiffViewer: rpc.request.getFileDiff`, {
 					filePath: file.path,
+					diffScope: file.diffScope,
 				});
 				const t0 = performance.now();
 				const result: FileDiff = await rpc.request.getFileDiff({
 					filePath: file.path,
+					diffScope: file.diffScope,
 				});
 				const ms = Math.round(performance.now() - t0);
 				console.log(`${LOG} DiffViewer: getFileDiff response`, {
@@ -58,7 +64,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 		}
 
 		load();
-	}, [file.path]);
+	}, [file.path, file.diffScope]);
 
 	if (loading) {
 		return (
@@ -81,7 +87,8 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 	// A diff with no @@ hunks means the file is empty or binary — nothing to render
 	const hasHunks = diffData.hunks.includes("@@");
 	if (!hasHunks) {
-		const isUntracked = file.indexState === "?" && file.worktreeState === "?";
+		const isUntracked =
+			file.indexState === "?" && file.worktreeState === "?";
 		return (
 			<div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
 				{isUntracked ? "New empty file" : "No changes"}
