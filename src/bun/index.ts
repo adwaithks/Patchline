@@ -26,6 +26,7 @@ const url = await getMainViewUrl();
 const mainWindow = new BrowserWindow({
 	title: "React + Tailwind + Vite",
 	url,
+	titleBarStyle: "hiddenInset",
 	frame: {
 		width: 900,
 		height: 700,
