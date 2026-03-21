@@ -1,4 +1,4 @@
-import { ChevronRight, File, Folder } from "lucide-react";
+import { ChevronRight, Folder } from "lucide-react";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -12,6 +12,7 @@ import {
 	SidebarMenuItem,
 	SidebarMenuSub,
 } from "@/components/ui/sidebar";
+import { FileIcon } from "@/lib/file-icon";
 import type { TreeNode } from "../../shared/types";
 
 interface SidebarFileTreeProps {
@@ -50,7 +51,7 @@ function TreeNode({ item }: { item: TreeNode }) {
 	if (!items.length) {
 		return (
 			<SidebarMenuButton className="data-[active=true]:bg-transparent">
-				<File />
+				<FileIcon path={name} />
 				<span className="truncate">{name}</span>
 			</SidebarMenuButton>
 		);

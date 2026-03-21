@@ -14,6 +14,7 @@ type ProjectContextValue = {
 	error: string | null;
 	selectedFile: FileChange | null;
 	selectFile: (file: FileChange | null) => void;
+	refresh: () => void;
 };
 
 const ProjectContext = createContext<ProjectContextValue>({
@@ -22,6 +23,7 @@ const ProjectContext = createContext<ProjectContextValue>({
 	error: null,
 	selectedFile: null,
 	selectFile: () => {},
+	refresh: () => {},
 });
 
 const LOG = "[geodesic:webview]";
@@ -32,12 +34,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
 	const selectFile = useCallback((file: FileChange | null) => {
 		if (file) {
-			console.log(`${LOG} selectFile (Changes tab click)`, {
-				path: file.path,
-				state: file.state,
-			});
-		} else {
-			console.log(`${LOG} selectFile cleared`);
+			console.log(`${LOG} selectFile`, { path: file.path });
 		}
 		setSelectedFile(file);
 	}, []);
@@ -47,6 +44,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 			...projectData,
 			selectedFile,
 			selectFile,
+			refresh: projectData.refresh,
 		}}>
 			{children}
 		</ProjectContext.Provider>

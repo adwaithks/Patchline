@@ -17,10 +17,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		console.log(`${LOG} DiffViewer: effect for file`, {
-			path: file.path,
-			state: file.state,
-		});
+		console.log(`${LOG} DiffViewer: effect for file`, { path: file.path });
 		setLoading(true);
 		setError(null);
 		setDiffData(null);
@@ -81,6 +78,17 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 
 	if (!diffData) return null;
 
+	// A diff with no @@ hunks means the file is empty or binary — nothing to render
+	const hasHunks = diffData.hunks.includes("@@");
+	if (!hasHunks) {
+		const isUntracked = file.indexState === "?" && file.worktreeState === "?";
+		return (
+			<div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
+				{isUntracked ? "New empty file" : "No changes"}
+			</div>
+		);
+	}
+
 	const fileName = file.path.split("/").pop() ?? file.path;
 	const diffViewMode =
 		layout === "unified" ? DiffModeEnum.Unified : DiffModeEnum.Split;
@@ -92,11 +100,12 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 				data={{
 					oldFile: {
 						fileName,
-						content: diffData.oldContent,
+						// null signals "no old file" (new/untracked) to the diff library
+						content: diffData.oldContent || null,
 					},
 					newFile: {
 						fileName,
-						content: diffData.newContent,
+						content: diffData.newContent || null,
 					},
 					hunks: diffData.hunks ? [diffData.hunks] : [],
 				}}

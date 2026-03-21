@@ -79,19 +79,32 @@ async function getGitChanges(dir: string): Promise<FileChange[]> {
 			.split("\n")
 			.filter(Boolean)
 			.map((line) => {
-				const xy = line.slice(0, 2);
-				const path = line.slice(3).trim().replace(/^"(.*)"$/, "$1");
-				let state: FileChange["state"] = "M";
-				if (xy.includes("?")) state = "?";
-				else if (xy.includes("A")) state = "A";
-				else if (xy.includes("D")) state = "D";
-				else if (xy.includes("R")) state = "R";
-				else if (xy.includes("U") || xy.trim() === "") state = "U";
-				else state = "M";
-				return { path, state };
+				const X = line[0] as FileChange["indexState"];
+				const Y = line[1] as FileChange["worktreeState"];
+				// Handle rename: "R  old -> new" or "R  old\0new"
+				const rawPath = line.slice(3).trim().replace(/^"(.*)"$/, "$1");
+				const path = rawPath.includes(" -> ")
+					? rawPath.split(" -> ")[1]
+					: rawPath;
+				return { path, indexState: X, worktreeState: Y };
 			});
 	} catch {
 		return [];
+	}
+}
+
+// ---- Stage / unstage ----
+async function runGit(args: string[], cwd: string): Promise<{ ok: boolean }> {
+	try {
+		const proc = Bun.spawn(["git", ...args], {
+			cwd,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const exit = await proc.exited;
+		return { ok: exit === 0 };
+	} catch {
+		return { ok: false };
 	}
 }
 
@@ -100,38 +113,58 @@ async function getFileDiff(filePath: string): Promise<FileDiff> {
 	const absPath = join(sourcePath, filePath);
 	console.log(`${BLOG} getFileDiff start`, { filePath, absPath, cwd: sourcePath });
 
-	// Get the diff hunks (unified format)
-	const diffProc = Bun.spawn(
-		["git", "diff", "HEAD", "--", filePath],
+	// Get new content from disk
+	let newContent = "";
+	try {
+		newContent = readFileSync(absPath, "utf-8");
+	} catch { /* deleted file */ }
+
+	// Check if file is tracked in HEAD (exit 0 = tracked, non-zero = untracked/new)
+	const headCheckProc = Bun.spawn(
+		["git", "cat-file", "-e", `HEAD:${filePath}`],
 		{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
 	);
-	const hunks = await new Response(diffProc.stdout).text();
-	const diffExit = await diffProc.exited;
-	const diffStderr = await new Response(diffProc.stderr).text();
-	if (diffStderr) console.warn(`${BLOG} git diff stderr`, diffStderr.slice(0, 500));
-	console.log(`${BLOG} git diff HEAD done`, { exit: diffExit, rawLen: hunks.length });
+	const headCheckExit = await headCheckProc.exited;
+	const isTracked = headCheckExit === 0;
 
-	// Get old content (from HEAD)
+	// Get old content only if tracked
 	let oldContent = "";
-	try {
+	if (isTracked) {
 		const oldProc = Bun.spawn(
 			["git", "show", `HEAD:${filePath}`],
 			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
 		);
 		oldContent = await new Response(oldProc.stdout).text();
 		await oldProc.exited;
-	} catch { /* new file */ }
+	}
 
-	// Get new content (from disk)
-	let newContent = "";
-	try {
-		newContent = readFileSync(absPath, "utf-8");
-	} catch { /* deleted file */ }
+	console.log(`${BLOG} file tracking status`, { isTracked, newContentLen: newContent.length });
 
-	// @git-diff-view/core parses a *full* unified diff: it requires the header
-	// (`diff --git`, `---`, `+++`) before `@@`. Stripping to `@@...` yields
-	// empty hunks in the parser and a blank UI.
-	const rawDiff = hunks.replace(/\r\n/g, "\n");
+	let rawDiff = "";
+
+	if (!isTracked) {
+		// Untracked / new file — diff against /dev/null to show all lines as added
+		const proc = Bun.spawn(
+			["git", "diff", "--no-index", "/dev/null", filePath],
+			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
+		);
+		const out = await new Response(proc.stdout).text();
+		await proc.exited; // exits 1 when files differ — that's expected
+		rawDiff = out.replace(/\r\n/g, "\n");
+		console.log(`${BLOG} git diff --no-index (untracked) done`, { rawLen: rawDiff.length });
+	} else {
+		// Tracked file — diff against HEAD
+		const diffProc = Bun.spawn(
+			["git", "diff", "HEAD", "--", filePath],
+			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
+		);
+		const hunks = await new Response(diffProc.stdout).text();
+		const diffExit = await diffProc.exited;
+		const diffStderr = await new Response(diffProc.stderr).text();
+		if (diffStderr) console.warn(`${BLOG} git diff stderr`, diffStderr.slice(0, 500));
+		console.log(`${BLOG} git diff HEAD done`, { exit: diffExit, rawLen: hunks.length });
+		rawDiff = hunks.replace(/\r\n/g, "\n");
+	}
 
 	console.log(`${BLOG} getFileDiff done`, {
 		filePath,
@@ -164,6 +197,14 @@ const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 			getFileDiff: async ({ filePath }) => {
 				console.log(`${BLOG} RPC getFileDiff`, { filePath });
 				return getFileDiff(filePath);
+			},
+			stageFile: async ({ filePath }) => {
+				console.log(`${BLOG} RPC stageFile`, { filePath });
+				return runGit(["add", filePath], sourcePath);
+			},
+			unstageFile: async ({ filePath }) => {
+				console.log(`${BLOG} RPC unstageFile`, { filePath });
+				return runGit(["reset", "HEAD", "--", filePath], sourcePath);
 			},
 		},
 		messages: {},

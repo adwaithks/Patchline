@@ -2,7 +2,10 @@ import type { RPCSchema } from "electrobun/bun";
 
 export type FileChange = {
 	path: string;
-	state: "M" | "U" | "A" | "D" | "R" | "?";
+	/** X column from git status --porcelain (index/staged status) */
+	indexState: " " | "M" | "A" | "D" | "R" | "C" | "U" | "?";
+	/** Y column from git status --porcelain (worktree status) */
+	worktreeState: " " | "M" | "A" | "D" | "R" | "C" | "U" | "?";
 };
 
 // Recursive tree node: either a file (string) or a folder ([name, ...children])
@@ -29,6 +32,14 @@ export type GeodesicRPCType = {
 			getFileDiff: {
 				params: { filePath: string };
 				response: FileDiff;
+			};
+			stageFile: {
+				params: { filePath: string };
+				response: { ok: boolean };
+			};
+			unstageFile: {
+				params: { filePath: string };
+				response: { ok: boolean };
 			};
 		};
 		messages: Record<never, never>;
