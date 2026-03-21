@@ -4,12 +4,15 @@
 	"description": "Electrobun app with React, Tailwind CSS, and Vite HMR",
 	"scripts": {
 		"start": "vite build && electrobun dev",
+		"geodesic": "bun geodesic.ts",
+		"geodesic:hmr": "bun geodesic.ts --hmr",
 		"dev": "electrobun dev --watch",
 		"dev:hmr": "concurrently \"bun run hmr\" \"bun run start\"",
 		"hmr": "vite --port 5173",
 		"build:canary": "vite build && electrobun build --env=canary"
 	},
 	"dependencies": {
+		"@fontsource/geist-mono": "^5.2.7",
 		"@radix-ui/react-collapsible": "^1.1.12",
 		"@radix-ui/react-dialog": "^1.1.15",
 		"@radix-ui/react-separator": "^1.1.8",

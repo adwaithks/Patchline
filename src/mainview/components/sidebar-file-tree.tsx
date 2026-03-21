@@ -12,35 +12,25 @@ import {
 	SidebarMenuItem,
 	SidebarMenuSub,
 } from "@/components/ui/sidebar";
+import type { TreeNode } from "../../shared/types";
 
-const tree = [
-	[
-		"app",
-		[
-			"api",
-			["hello", ["route.ts"]],
-			"page.tsx",
-			"layout.tsx",
-			["blog", ["page.tsx"]],
-		],
-	],
-	[
-		"components",
-		["ui", "button.tsx", "card.tsx"],
-		"header.tsx",
-		"footer.tsx",
-	],
-	["lib", ["util.ts"]],
-	["public", "favicon.ico", "vercel.svg"],
-	".eslintrc.json",
-	".gitignore",
-	"next.config.js",
-	"tailwind.config.js",
-	"package.json",
-	"README.md",
-];
+interface SidebarFileTreeProps {
+	tree: TreeNode[];
+}
 
-export function SidebarFileTree() {
+export function SidebarFileTree({ tree }: SidebarFileTreeProps) {
+	if (tree.length === 0) {
+		return (
+			<SidebarGroup>
+				<SidebarGroupContent>
+					<p className="px-3 py-4 text-xs text-muted-foreground">
+						No files found.
+					</p>
+				</SidebarGroupContent>
+			</SidebarGroup>
+		);
+	}
+
 	return (
 		<SidebarGroup>
 			<SidebarGroupContent>
@@ -54,14 +44,14 @@ export function SidebarFileTree() {
 	);
 }
 
-function TreeNode({ item }: { item: string | any[] }) {
+function TreeNode({ item }: { item: TreeNode }) {
 	const [name, ...items] = Array.isArray(item) ? item : [item];
 
 	if (!items.length) {
 		return (
 			<SidebarMenuButton className="data-[active=true]:bg-transparent">
 				<File />
-				{name}
+				<span className="truncate">{name}</span>
 			</SidebarMenuButton>
 		);
 	}
@@ -70,18 +60,17 @@ function TreeNode({ item }: { item: string | any[] }) {
 		<SidebarMenuItem>
 			<Collapsible
 				className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-				defaultOpen={name === "components" || name === "ui"}
 			>
 				<CollapsibleTrigger asChild>
 					<SidebarMenuButton>
 						<ChevronRight className="transition-transform" />
 						<Folder />
-						{name}
+						<span className="truncate">{name}</span>
 					</SidebarMenuButton>
 				</CollapsibleTrigger>
 				<CollapsibleContent>
 					<SidebarMenuSub>
-						{items.map((subItem, index) => (
+						{(items as TreeNode[]).map((subItem, index) => (
 							<TreeNode key={index} item={subItem} />
 						))}
 					</SidebarMenuSub>

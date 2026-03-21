@@ -9,14 +9,17 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarChanges } from "@/components/sidebar-changes";
 import { SidebarFileTree } from "@/components/sidebar-file-tree";
+import { useProject } from "@/context/project-context";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+	const { data, loading } = useProject();
+
 	return (
 		<Sidebar {...props}>
 			<SidebarHeader className="electrobun-webkit-app-region-drag h-10 p-0" />
 			<SidebarContent>
 				<Tabs defaultValue="changes" className="w-full">
-					<TabsList className="mx-2 my-1 h-9 w-[calc(100%-1rem)] rounded-lg">
+					<TabsList className="mx-2 my-1 h-9 rounded-lg w-[calc(100%-1rem)]">
 						<TabsTrigger
 							value="changes"
 							className="flex-1 text-xs gap-1.5 rounded-md"
@@ -33,14 +36,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 						</TabsTrigger>
 					</TabsList>
 					<TabsContent value="changes" className="mt-0">
-						<SidebarChanges />
+						{loading ? (
+							<LoadingState />
+						) : (
+							<SidebarChanges changes={data?.changes ?? []} />
+						)}
 					</TabsContent>
 					<TabsContent value="files" className="mt-0">
-						<SidebarFileTree />
+						{loading ? (
+							<LoadingState />
+						) : (
+							<SidebarFileTree tree={data?.tree ?? []} />
+						)}
 					</TabsContent>
 				</Tabs>
 			</SidebarContent>
 			<SidebarRail />
 		</Sidebar>
+	);
+}
+
+function LoadingState() {
+	return (
+		<div className="space-y-1 px-3 py-2">
+			{[...Array(5)].map((_, i) => (
+				<div
+					key={i}
+					className="h-7 rounded-md bg-muted/50 animate-pulse"
+					style={{ width: `${60 + (i % 3) * 15}%` }}
+				/>
+			))}
+		</div>
 	);
 }
