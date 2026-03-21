@@ -7,6 +7,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useProject } from "@/context/project-context";
 import type { FileChange } from "../../shared/types";
 
 interface SidebarChangesProps {
@@ -14,6 +15,8 @@ interface SidebarChangesProps {
 }
 
 export function SidebarChanges({ changes }: SidebarChangesProps) {
+	const { selectedFile, selectFile } = useProject();
+
 	if (changes.length === 0) {
 		return (
 			<SidebarGroup>
@@ -32,11 +35,15 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 				<SidebarMenu>
 					{changes.map((item, index) => (
 						<SidebarMenuItem key={index}>
-							<SidebarMenuButton className="pr-6">
+							<SidebarMenuButton
+								className="pr-10"
+								isActive={selectedFile?.path === item.path}
+								onClick={() => selectFile(item)}
+							>
 								<File />
 								<span className="truncate">{item.path}</span>
 							</SidebarMenuButton>
-							<SidebarMenuBadge>{item.state}</SidebarMenuBadge>
+							<SidebarMenuBadge className="right-2">{item.state}</SidebarMenuBadge>
 						</SidebarMenuItem>
 					))}
 				</SidebarMenu>

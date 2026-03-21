@@ -1,7 +1,7 @@
 import { BrowserWindow, BrowserView, Updater } from "electrobun/bun";
-import { resolve, relative, join } from "path";
-import { readdirSync, statSync } from "fs";
-import type { GeodesicRPCType, TreeNode, FileChange } from "../shared/types";
+import { resolve, join } from "path";
+import { readdirSync, statSync, readFileSync } from "fs";
+import type { GeodesicRPCType, TreeNode, FileChange, FileDiff } from "../shared/types";
 
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
@@ -28,6 +28,9 @@ function getSourcePath(): string {
 }
 
 const sourcePath = getSourcePath();
+
+const BLOG = "[geodesic:bun]";
+console.log(`${BLOG} process starting`, { sourcePath });
 
 // ---- Build file tree ----
 const IGNORE = new Set([
@@ -92,17 +95,75 @@ async function getGitChanges(dir: string): Promise<FileChange[]> {
 	}
 }
 
+// ---- Get file diff via git ----
+async function getFileDiff(filePath: string): Promise<FileDiff> {
+	const absPath = join(sourcePath, filePath);
+	console.log(`${BLOG} getFileDiff start`, { filePath, absPath, cwd: sourcePath });
+
+	// Get the diff hunks (unified format)
+	const diffProc = Bun.spawn(
+		["git", "diff", "HEAD", "--", filePath],
+		{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
+	);
+	const hunks = await new Response(diffProc.stdout).text();
+	const diffExit = await diffProc.exited;
+	const diffStderr = await new Response(diffProc.stderr).text();
+	if (diffStderr) console.warn(`${BLOG} git diff stderr`, diffStderr.slice(0, 500));
+	console.log(`${BLOG} git diff HEAD done`, { exit: diffExit, rawLen: hunks.length });
+
+	// Get old content (from HEAD)
+	let oldContent = "";
+	try {
+		const oldProc = Bun.spawn(
+			["git", "show", `HEAD:${filePath}`],
+			{ cwd: sourcePath, stdout: "pipe", stderr: "pipe" },
+		);
+		oldContent = await new Response(oldProc.stdout).text();
+		await oldProc.exited;
+	} catch { /* new file */ }
+
+	// Get new content (from disk)
+	let newContent = "";
+	try {
+		newContent = readFileSync(absPath, "utf-8");
+	} catch { /* deleted file */ }
+
+	// @git-diff-view/core parses a *full* unified diff: it requires the header
+	// (`diff --git`, `---`, `+++`) before `@@`. Stripping to `@@...` yields
+	// empty hunks in the parser and a blank UI.
+	const rawDiff = hunks.replace(/\r\n/g, "\n");
+
+	console.log(`${BLOG} getFileDiff done`, {
+		filePath,
+		oldContentLen: oldContent.length,
+		newContentLen: newContent.length,
+		rawDiffLen: rawDiff.length,
+		preview: rawDiff.slice(0, 200),
+	});
+
+	return { filePath, oldContent, newContent, hunks: rawDiff };
+}
+
 // ---- RPC ----
 const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 	maxRequestTime: 10000,
 	handlers: {
 		requests: {
 			getProjectData: async () => {
+				console.log(`${BLOG} RPC getProjectData`);
 				const [tree, changes] = await Promise.all([
 					Promise.resolve(buildTree(sourcePath, sourcePath)),
 					getGitChanges(sourcePath),
 				]);
+				console.log(`${BLOG} RPC getProjectData →`, {
+					treeRoots: tree.length,
+					changes: changes.length,
+				});
 				return { sourcePath, tree, changes };
+			},
+			getFileDiff: async ({ filePath }) => {
+				console.log(`${BLOG} RPC getFileDiff`, { filePath });
+				return getFileDiff(filePath);
 			},
 		},
 		messages: {},

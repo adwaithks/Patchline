@@ -4,27 +4,37 @@ import "./index.css";
 import App from "./App";
 import { ProjectProvider } from "./context/project-context";
 
-// Bootstrap Electrobun RPC only when running inside the packaged app.
-// In Vite HMR mode __electrobunWebviewId is not set, so we skip safely.
-if (typeof window !== "undefined" && (window as any).__electrobunWebviewId) {
-	import("electrobun/view").then(({ Electroview }) => {
-		import("../shared/types").then((_mod) => {
+const LOG = "[geodesic:webview]";
+
+async function init() {
+	console.log(`${LOG} init() start`, {
+		electrobun: Boolean((window as any).__electrobunWebviewId),
+	});
+
+	if ((window as any).__electrobunWebviewId) {
+		try {
+			const { Electroview } = await import("electrobun/view");
 			const rpc = Electroview.defineRPC<import("../shared/types").GeodesicRPCType>({
-				handlers: {
-					requests: {},
-					messages: {},
-				},
+				handlers: { requests: {}, messages: {} },
 			});
 			new Electroview({ rpc });
 			(window as any).__geodesicRPC = rpc;
-		});
-	}).catch(console.error);
+			console.log(`${LOG} RPC ready (Electroview + __geodesicRPC set)`);
+		} catch (err) {
+			console.error(`${LOG} RPC bootstrap failed`, err);
+		}
+	} else {
+		console.log(`${LOG} no __electrobunWebviewId — dev preview / Vite only`);
+	}
+
+	console.log(`${LOG} mounting React root`);
+	createRoot(document.getElementById("root")!).render(
+		<StrictMode>
+			<ProjectProvider>
+				<App />
+			</ProjectProvider>
+		</StrictMode>,
+	);
 }
 
-createRoot(document.getElementById("root")!).render(
-	<StrictMode>
-		<ProjectProvider>
-			<App />
-		</ProjectProvider>
-	</StrictMode>,
-);
+init();

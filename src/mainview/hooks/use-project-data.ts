@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import type { TreeNode, FileChange } from "../../shared/types";
 
+const LOG = "[geodesic:webview]";
+
 export type ProjectData = {
 	sourcePath: string;
 	tree: TreeNode[];
@@ -14,26 +16,34 @@ export function useProjectData() {
 
 	useEffect(() => {
 		async function load() {
+			console.log(`${LOG} useProjectData: fetching project…`);
 			try {
 				const rpc = (window as any).__geodesicRPC;
 				if (!rpc) {
-					// Running in Vite HMR without Electrobun
+					console.log(
+						`${LOG} useProjectData: no RPC — using empty dev preview data`,
+					);
 					setData({ sourcePath: "(dev preview)", tree: [], changes: [] });
-					setLoading(false);
 					return;
 				}
-				const result = await rpc.requestProxy.getProjectData();
+				console.log(`${LOG} useProjectData: calling rpc.request.getProjectData()`);
+				const result = await rpc.request.getProjectData();
+				console.log(`${LOG} useProjectData: getProjectData ok`, {
+					sourcePath: result.sourcePath,
+					treeRoots: result.tree?.length ?? 0,
+					changes: result.changes?.length ?? 0,
+				});
 				setData(result);
 			} catch (e) {
-				setError(e instanceof Error ? e.message : "Failed to load");
+				const msg = e instanceof Error ? e.message : "Failed to load";
+				console.error(`${LOG} useProjectData: error`, e);
+				setError(msg);
 			} finally {
 				setLoading(false);
+				console.log(`${LOG} useProjectData: load finished`);
 			}
 		}
-
-		// RPC may not be ready immediately — wait a tick for the dynamic import to settle
-		const timer = setTimeout(load, 100);
-		return () => clearTimeout(timer);
+		load();
 	}, []);
 
 	return { data, loading, error };
