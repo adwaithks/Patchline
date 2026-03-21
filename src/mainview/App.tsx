@@ -10,7 +10,7 @@ function App() {
 		<SidebarProvider>
 			<AppSidebar />
 			<SidebarInset>
-			<header className="flex h-10 shrink-0 items-center gap-2 border-b px-4 electrobun-webkit-app-region-drag bg-red-500/40">
+			<header className="flex h-10 shrink-0 items-center gap-2 border-b px-4 electrobun-webkit-app-region-drag">
 					<SidebarTrigger className="-ml-1 electrobun-webkit-app-region-no-drag" />
 					<span className="text-sm text-muted-foreground select-none">
 						Select a file to view
