@@ -24,6 +24,7 @@ import {
 	SiHaskell,
 	SiHtml5,
 	SiJavascript,
+	SiJest,
 	SiJson,
 	SiKotlin,
 	SiLess,
@@ -87,7 +88,48 @@ const BRAND_BY_BASENAME: Record<string, IconType> = {
 	"jsconfig.json": SiTypescript,
 	"docker-compose.yml": SiDocker,
 	"docker-compose.yaml": SiDocker,
+	"jest.config.js": SiJest,
+	"jest.config.ts": SiJest,
+	"jest.config.mjs": SiJest,
+	"jest.config.cjs": SiJest,
+	"jest.config.json": SiJest,
+	"jest.config.mts": SiJest,
+	"jest.config.cts": SiJest,
+	"jest.preset.js": SiJest,
+	"jest.preset.cjs": SiJest,
+	"jest.preset.mjs": SiJest,
+	"jest.preset.ts": SiJest,
+	"jest.setup.js": SiJest,
+	"jest.setup.ts": SiJest,
+	"jest.setup.mjs": SiJest,
+	"jest.setup.cjs": SiJest,
+	"setupTests.js": SiJest,
+	"setupTests.ts": SiJest,
+	"setupTests.tsx": SiJest,
 };
+
+const TEST_JS_EXT_RE =
+	/\.(test|spec)\.(mjs|cjs|mts|cts|jsx?|tsx?)$/;
+
+function isUnderTestsDir(path: string): boolean {
+	return /[/\\]__tests__[/\\]/i.test(path);
+}
+
+function isJestishBasename(base: string): boolean {
+	if (base.startsWith("jest.config.") || base.startsWith("jest.preset.")) {
+		return true;
+	}
+	if (base.startsWith("jest.setup.")) {
+		return true;
+	}
+	return (
+		base === ".jestrc" ||
+		base === ".jestrc.js" ||
+		base === ".jestrc.json" ||
+		base === ".jestrc.cjs" ||
+		base === ".jestrc.mjs"
+	);
+}
 
 const BRAND_BY_EXT: Record<string, IconType> = {
 	py: SiPython,
@@ -195,6 +237,14 @@ export function FileIcon({
 	if (byBase) {
 		const Icon = byBase;
 		return <Icon className={cls} aria-hidden />;
+	}
+
+	if (isJestishBasename(base)) {
+		return <SiJest className={cls} aria-hidden />;
+	}
+
+	if (TEST_JS_EXT_RE.test(base) || isUnderTestsDir(path)) {
+		return <SiJest className={cls} aria-hidden />;
 	}
 
 	const ext = fileExtension(path);

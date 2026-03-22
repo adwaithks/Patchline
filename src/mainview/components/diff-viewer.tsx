@@ -5,8 +5,6 @@ import type { DiffLayoutMode } from "@/types/diff-layout";
 import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { FileDiff, SelectedFileChange } from "../../shared/types";
 
-const LOG = "[patchline:webview]";
-
 interface DiffViewerProps {
 	file: SelectedFileChange;
 	layout: DiffLayoutMode;
@@ -18,10 +16,6 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		console.log(`${LOG} DiffViewer: effect for file`, {
-			path: file.path,
-			diffScope: file.diffScope,
-		});
 		setLoading(true);
 		setError(null);
 		setDiffData(null);
@@ -30,36 +24,20 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 			try {
 				const rpc = getPatchlineRPC();
 				if (!rpc) {
-					console.warn(`${LOG} DiffViewer: __patchlineRPC missing`);
 					setError("RPC not available");
 					return;
 				}
-				console.log(`${LOG} DiffViewer: rpc.request.getFileDiff`, {
-					filePath: file.path,
-					diffScope: file.diffScope,
-				});
-				const t0 = performance.now();
 				const result: FileDiff = await rpc.request.getFileDiff({
 					filePath: file.path,
 					diffScope: file.diffScope,
 				});
-				const ms = Math.round(performance.now() - t0);
-				console.log(`${LOG} DiffViewer: getFileDiff response`, {
-					ms,
-					oldContentLen: result.oldContent?.length ?? 0,
-					newContentLen: result.newContent?.length ?? 0,
-					hunksLen: result.hunks?.length ?? 0,
-					hunksPreview: result.hunks?.slice(0, 120) ?? "",
-				});
 				setDiffData(result);
 			} catch (e) {
-				console.error(`${LOG} DiffViewer: getFileDiff failed`, e);
 				setError(
 					e instanceof Error ? e.message : "Failed to load diff",
 				);
 			} finally {
 				setLoading(false);
-				console.log(`${LOG} DiffViewer: load finished`);
 			}
 		}
 

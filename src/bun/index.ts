@@ -141,20 +141,22 @@ async function commitStaged(
 	}
 }
 
-// git diff --no-index always exits 1 when files differ, causing simple-git to throw.
-// The diff output ends up on the error object rather than the return value.
-async function diffNoIndex(filePath: string): Promise<string> {
+// `git diff --no-index` often exits 1 with empty stderr; simple-git still resolves `raw()`
+// with the diff text. Use the return value (do not discard it after await).
+async function diffNoIndex(repoRelativePath: string): Promise<string> {
 	try {
-		await requireGit().raw([
+		const out = await requireGit().raw([
 			"diff",
 			"--no-color",
 			"--no-index",
+			"--",
 			"/dev/null",
-			filePath,
+			repoRelativePath,
 		]);
-		return "";
+		return String(out ?? "").replace(/\r\n/g, "\n");
 	} catch (e: unknown) {
-		return (e as any)?.git?.stdout ?? "";
+		const stdout = (e as { git?: { stdout?: string } })?.git?.stdout ?? "";
+		return String(stdout).replace(/\r\n/g, "\n");
 	}
 }
 
@@ -318,7 +320,6 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 				return { ok: true, path, error: null };
 			},
 			getFileDiff: async ({ filePath, diffScope }) => {
-				console.log(`${BLOG} RPC getFileDiff`, { filePath, diffScope });
 				return getFileDiff(filePath, diffScope);
 			},
 			stageFile: async ({ filePath }) => {
