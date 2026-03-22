@@ -49,11 +49,15 @@ export function OpenProjectScreen({
 					the first batch, use{" "}
 					<span className="text-zinc-400">Add repository</span> in the top bar
 					(folder icon).
-					You can also launch Patchline with{" "}
+					You can also launch with{" "}
 					<code className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-400">
-						PATCHLINE_SOURCE=/path/to/repo
+						--source
 					</code>{" "}
-					to seed an initial repo.
+					(repeat per repo) or{" "}
+					<code className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-400">
+						PATCHLINE_SOURCE=/a,/b
+					</code>{" "}
+					to seed repos from the CLI.
 				</p>
 				{banner ? (
 					<p className="w-full rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-left text-xs text-red-200/90">

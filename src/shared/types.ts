@@ -48,7 +48,7 @@ export type PatchlineRPCType = {
 			getProjectData: {
 				params: void;
 				response: {
-					/** Empty until at least one folder is added (or `PATCHLINE_SOURCE` at launch). */
+					/** Empty until at least one folder is added (or comma-separated `PATCHLINE_SOURCE` at launch). */
 					repos: RepoSnapshot[];
 				};
 			};

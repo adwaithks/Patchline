@@ -29,10 +29,23 @@ function repoKey(path: string): string {
 const repoByRoot = new Map<string, SimpleGit>();
 const repoOrder: string[] = [];
 
-function getInitialWorkspaceRoot(): string | null {
-	const fromEnv = process.env.PATCHLINE_SOURCE?.trim();
-	if (!fromEnv) return null;
-	return resolve(fromEnv);
+/**
+ * Production (and any process env): `PATCHLINE_SOURCE` is one string; split on `,`
+ * for multiple repo roots. Segments are trimmed, resolved to absolute paths, deduped.
+ */
+function parsePatchlineSourceRoots(raw: string): string[] {
+	const out: string[] = [];
+	const seen = new Set<string>();
+	for (const part of raw.split(",")) {
+		const p = part.trim();
+		if (!p) continue;
+		const abs = resolve(p);
+		const key = repoKey(abs);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push(abs);
+	}
+	return out;
 }
 
 function ensureRepo(absRoot: string): SimpleGit {
@@ -44,15 +57,22 @@ function ensureRepo(absRoot: string): SimpleGit {
 	return repoByRoot.get(key)!;
 }
 
-const initialRoot = getInitialWorkspaceRoot();
-if (initialRoot) {
-	ensureRepo(initialRoot);
+/** Register repos listed in `PATCHLINE_SOURCE` (comma-separated string) before the window loads. */
+async function bootstrapReposFromEnv(): Promise<void> {
+	const raw = process.env.PATCHLINE_SOURCE?.trim();
+	if (!raw) return;
+	const candidates = parsePatchlineSourceRoots(raw);
+	for (const abs of candidates) {
+		const isRepo = await simpleGit(abs).checkIsRepo();
+		if (!isRepo) {
+			console.warn(`${BLOG} PATCHLINE_SOURCE skipped (not a Git repo)`, {
+				path: abs,
+			});
+			continue;
+		}
+		ensureRepo(abs);
+	}
 }
-
-console.log(`${BLOG} process starting`, {
-	repoCount: repoOrder.length,
-	repos: repoOrder,
-});
 
 function getGitOrNull(root: string): SimpleGit | null {
 	return repoByRoot.get(repoKey(root)) ?? null;
@@ -387,6 +407,13 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 		},
 		messages: {},
 	},
+});
+
+await bootstrapReposFromEnv();
+
+console.log(`${BLOG} process starting`, {
+	repoCount: repoOrder.length,
+	repos: repoOrder,
 });
 
 async function getMainViewUrl(): Promise<string> {

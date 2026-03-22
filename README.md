@@ -36,7 +36,7 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 
 |                      |                                                                                                            |
 | :------------------- | :--------------------------------------------------------------------------------------------------------- |
-| **Multiple repos**   | Track **several Git repositories** in one window — seed with `PATCHLINE_SOURCE` / `--source`, **Open project** / **Choose folders…** (multi-select where the OS allows), or **Add repository** (folder icon in the header) anytime. |
+| **Multiple repos**   | Track **several Git repositories** in one window — seed with **repeated `--source`**, **`PATCHLINE_SOURCE=a,b`**, **Open project** / **Choose folders…** (multi-select where the OS allows), or **Add repository** (folder icon in the header). |
 | **No worktrees yet** | [Git worktrees](https://git-scm.com/docs/git-worktree) are **not** supported; use a normal clone checkout. |
 
 ---
@@ -45,7 +45,7 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 
 | Area           | What works                                                                                                                |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Repositories** | **Multi-repo:** each root has its own **Staged** / **Changes**, **branch** in the sidebar, and **collapsible** section. `PATCHLINE_SOURCE` / `--source` seeds the first repo; **Choose folders…** can add **multiple** valid `.git` directories in one sheet; **Add repository** appends more without restart. |
+| **Repositories** | **Multi-repo:** each root has its own **Staged** / **Changes**, **branch** in the sidebar, and **collapsible** section. Seed repos at launch with **repeated `--source`** or **`PATCHLINE_SOURCE=/a,/b`** (comma-separated); **Choose folders…** can add **multiple** valid `.git` directories in one sheet; **Add repository** appends more without restart. |
 | **Changes**    | Per-repo lists from `git status --porcelain` — **staged** vs **unstaged** buckets                                                                    |
 | **Diffs**      | Per-file diff (scoped to the correct repo) with **unified** or **split** layout ([`@git-diff-view`](https://github.com/MrWangJustToSay/git-diff-view)); title bar shows `repoFolder/path/in/repo` |
 | **Staging**    | Stage / unstage one file; **stage all** / **unstage all** **per repository**                                                                 |
@@ -89,28 +89,44 @@ bun install
 
 ### Opening a repository
 
-**Verified behavior (dev and production builds):** if `PATCHLINE_SOURCE` is set when the process starts, that repo is added immediately. If you have **no** repos yet, you get **Add a repository** and a native **Choose folders…** sheet (each selection must be a directory containing `.git`; you can pick **multiple** folders in one go where the OS dialog allows). After the first repo(s), use the **folder-plus** control in the **top bar** to add more anytime.
+**Verified behavior (dev and production builds):** if `PATCHLINE_SOURCE` is set when the process starts, each listed Git root is added (see **multiple repos** below). If you have **no** repos yet, you get **Add a repository** and a native **Choose folders…** sheet (each selection must be a directory containing `.git`; you can pick **multiple** folders in one go where the OS dialog allows). After the first repo(s), use the **folder-plus** control in the **top bar** to add more anytime.
 
-**Option A — environment variable**  
-Best for scripts, agents, and “always this repo”. To dogfood on **this** repository:
+**Option A — `--source` flags (recommended)**  
+Repeat **`--source`** once per repository (paths are resolved from the current working directory). With **npm**, pass them after `--` so they reach the launcher:
 
 ```bash
-cd /path/to/patchline   # your checkout of this repo
-export PATCHLINE_SOURCE="$PWD"
+cd /path/to/patchline
+npm run patchline:hmr -- --source .
+# two repos:
+npm run patchline:hmr -- --source . --source ../other-repo
+```
+
+Same idea with **Bun** directly:
+
+```bash
+bun patchline.ts --hmr --source "$PWD" --source ~/work/my-app
+```
+
+You can still put **comma-separated** paths in a single flag: `--source .,../other-repo`. **`--source=/path`** works too.
+
+**Option B — environment variable**  
+`PATCHLINE_SOURCE` is **comma-separated** absolute or relative roots (the launcher also writes this when you use `--source`). Handy for agents and scripts:
+
+```bash
+cd /path/to/patchline
+export PATCHLINE_SOURCE="$PWD,/path/to/other-repo"
 bun run patchline:hmr
 ```
 
-Use any other checkout path for a different project.
-
-**Option B — no env var**  
+**Option C — no env / no `--source`**  
 From the clone root:
 
 ```bash
 bun run patchline:hmr
-# or: bun patchline.ts --hmr   (omit --source)
+# or: bun patchline.ts --hmr
 ```
 
-The launcher [`patchline.ts`](./patchline.ts) only injects `PATCHLINE_SOURCE` when you pass `--source` (e.g. `bun patchline.ts --source "$PWD" --hmr`). If you omit `--source`, it **clears** inherited `PATCHLINE_SOURCE` in the child process so you don’t accidentally open the wrong tree.
+The launcher [`patchline.ts`](./patchline.ts) sets `PATCHLINE_SOURCE` from your **`--source`** arguments; if you pass **none**, it **clears** inherited `PATCHLINE_SOURCE` in the child process so you don’t accidentally open the wrong tree.
 
 ### Claude Code (and other agents)
 
@@ -168,20 +184,38 @@ Runs **Vite production** (`dist/`) then **Electrobun** (`--env=canary`). The `.a
 | **.app bundle** | `build/canary-macos-arm64/Patchline-canary.app` (folder name may include `linux` / `win` on other platforms) |
 | **Installer**   | `artifacts/canary-macos-arm64-Patchline-canary.dmg` (+ `.tar.zst` update payload)                            |
 
-**Run the built app** — same rules as dev: optional env seeds a **first** repo; with **no** repos yet you get **Choose folders…**; add more anytime via the header **Add repository** (folder-plus) control.
+**Run the built macOS app**
 
-- **Double-click** the app or `open Patchline-canary.app` → folder picker (no `PATCHLINE_SOURCE`).
-- **Open this repo in Patchline** after a local build (path to `.app` may differ by arch / name):
+| How you open it | What happens |
+| :-- | :-- |
+| **Double-click** the `.app`, or `open Patchline-canary.app` | No env → **Choose folders…** / **Add repository** in the UI (same idea as dev with no `--source`). |
+| **`open --env PATCHLINE_SOURCE="…"`** | **One env var**, one string. Split repo roots with **commas** (no spaces). Prefer **absolute** paths. |
+
+**Example (verified):** two repos at launch —
 
 ```bash
-cd /path/to/patchline
-open --env PATCHLINE_SOURCE="$PWD" \
-  "build/canary-macos-arm64/Patchline-canary.app"
+open --env PATCHLINE_SOURCE="/Users/kannan/Projects/Patchline,/Users/kannan/Projects/flow" \
+  "/Users/kannan/Projects/Patchline/build/canary-macos-arm64/Patchline-canary.app"
 ```
 
-**macOS note:** Prefixing the command (`VAR=value open …`) often **does not** pass environment variables into a GUI `.app`. Use `open --env PATCHLINE_SOURCE=/path` as above.
+One repo is the same, without a comma:
 
-**Tip:** If you already launched Patchline with env vars and want a **second** instance without them (to see **Choose folder**), use `open -n /path/to/Patchline-canary.app` so macOS starts a new process.
+```bash
+open --env PATCHLINE_SOURCE="/Users/kannan/Projects/Patchline" \
+  "/Users/kannan/Projects/Patchline/build/canary-macos-arm64/Patchline-canary.app"
+```
+
+**`open -n`** starts a **new** app instance. Use it if Patchline is already running and you need this launch to pick up **`PATCHLINE_SOURCE`** (otherwise macOS may reuse the old process and ignore the new env):
+
+```bash
+open -n --env PATCHLINE_SOURCE="/path/repo-a,/path/repo-b" "/path/to/Patchline-canary.app"
+```
+
+**How this relates to dev:** the Bun main always reads **`PATCHLINE_SOURCE`** and splits on **`,`**. Dev **[`patchline.ts`](./patchline.ts)** can set that for you via repeated **`--source`** flags. The **`.app` does not take `--source`** — for production you only use **`open --env`** (or plain `open` with no env).
+
+**macOS:** `VAR=value open …` often **does not** inject env into a GUI `.app`; use **`open --env`** as above.
+
+**Tip:** `open -n /path/to/Patchline-canary.app` with **no** `--env` opens a fresh instance with no pre-seeded repos.
 
 Install from the `.dmg` in `artifacts/` if you prefer; drag **Patchline** to Applications, then use Finder or the `open` / `open --env` patterns above.
 

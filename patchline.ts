@@ -1,39 +1,84 @@
 #!/usr/bin/env bun
 /**
  * Patchline launcher
+ *
  * Usage:
- *   bun patchline.ts [--source /path/to/project] [--hmr]
- *   Omit --source to open the app and pick a repository in the UI.
+ *   bun patchline.ts [--hmr] [--source <path>]...
+ *   bun patchline.ts --hmr --source . --source ../other-repo
+ *   npm run patchline:hmr -- --source . --source ~/work/app
+ *
+ * Each `--source` is one repository root (repeat the flag for multiple repos).
+ * You can also use `--source a,b` (comma-separated in one flag). Paths are
+ * resolved relative to the current working directory, then deduped.
+ *
+ * Omit every `--source` to pick folders in the app (and clear inherited PATCHLINE_SOURCE).
  */
 import { resolve } from "path";
 import { spawn } from "child_process";
 
-const args = process.argv.slice(2);
+/** Collect paths from repeated `--source` / `--source=`; commas inside a value split too. */
+function collectSourcePaths(argv: string[]): string[] {
+	const segments: string[] = [];
+	for (let i = 0; i < argv.length; i++) {
+		const a = argv[i]!;
+		if (a === "--source") {
+			const next = argv[i + 1];
+			if (next !== undefined && !next.startsWith("-")) {
+				segments.push(next);
+				i += 1;
+			}
+			continue;
+		}
+		if (a.startsWith("--source=")) {
+			const rest = a.slice("--source=".length);
+			if (rest) segments.push(rest);
+		}
+	}
+	const raw: string[] = [];
+	for (const seg of segments) {
+		for (const part of seg.split(",")) {
+			const p = part.trim();
+			if (p) raw.push(p);
+		}
+	}
+	const seen = new Set<string>();
+	const resolved: string[] = [];
+	for (const p of raw) {
+		const abs = resolve(p);
+		if (seen.has(abs)) continue;
+		seen.add(abs);
+		resolved.push(abs);
+	}
+	return resolved;
+}
 
-const sourceIdx = args.indexOf("--source");
-const hasSource = sourceIdx !== -1 && Boolean(args[sourceIdx + 1]);
-const sourcePath = hasSource ? resolve(args[sourceIdx + 1]!) : undefined;
+const args = process.argv.slice(2);
 const hmr = args.includes("--hmr");
+const sourcePaths = collectSourcePaths(args);
+const patchlineSource = sourcePaths.join(",");
 
 const env: NodeJS.ProcessEnv = { ...process.env };
-if (hasSource && sourcePath) {
-	env.PATCHLINE_SOURCE = sourcePath;
+if (patchlineSource) {
+	env.PATCHLINE_SOURCE = patchlineSource;
 } else {
 	delete env.PATCHLINE_SOURCE;
 }
 
-console.log(
-	`Patchline → ${hasSource ? sourcePath : "(pick folder in app)"}${hmr ? " (HMR)" : ""}`,
-);
+const sourceLog =
+	sourcePaths.length === 0
+		? "(pick folder in app)"
+		: sourcePaths.length === 1
+			? sourcePaths[0]
+			: `${sourcePaths.length} repos`;
+
+console.log(`Patchline → ${sourceLog}${hmr ? " (HMR)" : ""}`);
 
 if (hmr) {
-	// Run Vite dev server and electrobun dev in parallel
 	const vite = spawn("bun", ["run", "hmr"], {
 		stdio: "inherit",
 		env,
 		cwd: import.meta.dir,
 	});
-	// Give Vite a moment to start before launching the app
 	await Bun.sleep(1500);
 	const electrobun = spawn("bun", ["run", "start"], {
 		stdio: "inherit",
