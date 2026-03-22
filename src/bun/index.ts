@@ -145,7 +145,13 @@ async function commitStaged(
 // The diff output ends up on the error object rather than the return value.
 async function diffNoIndex(filePath: string): Promise<string> {
 	try {
-		await requireGit().raw(["diff", "--no-index", "/dev/null", filePath]);
+		await requireGit().raw([
+			"diff",
+			"--no-color",
+			"--no-index",
+			"/dev/null",
+			filePath,
+		]);
 		return "";
 	} catch (e: unknown) {
 		return (e as any)?.git?.stdout ?? "";
@@ -215,6 +221,7 @@ async function getFileDiff(
 		try {
 			rawDiff = await requireGit().raw([
 				"diff",
+				"--no-color",
 				"--cached",
 				"HEAD",
 				"--",
@@ -228,7 +235,12 @@ async function getFileDiff(
 	} else if (diffScope === "unstaged" && hasUnstaged) {
 		// Worktree vs index (what you’re still editing on top of staging)
 		try {
-			rawDiff = await requireGit().raw(["diff", "--", filePath]);
+			rawDiff = await requireGit().raw([
+				"diff",
+				"--no-color",
+				"--",
+				filePath,
+			]);
 		} catch {
 			rawDiff = "";
 		}

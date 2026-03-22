@@ -9,10 +9,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-	SidebarGitProvider,
-	useSidebarGit,
-} from "@/context/sidebar-git-context";
+import { SidebarGitProvider, useSidebarGit } from "@/context/sidebar-git-context";
 import { useWorkspace, WorkspaceProvider } from "@/context/workspace-context";
 import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { DiffLayoutMode } from "@/types/diff-layout";
@@ -75,7 +72,8 @@ function AppContent() {
 	);
 }
 
-function AppShell() {
+/** Subscribes to git poll; lives under `SidebarGitProvider` only so `AppContent` is not a descendant. */
+function SidebarGitColumn() {
 	const { data, loading, error, refresh } = useSidebarGit();
 	const { selectFile } = useWorkspace();
 	const rpc = getPatchlineRPC();
@@ -88,22 +86,19 @@ function AppShell() {
 
 	if (needsOpen) {
 		return (
-			<OpenProjectScreen
-				gitLoadError={error}
-				onOpened={async () => {
-					selectFile(null);
-					await refresh();
-				}}
-			/>
+			<div className="fixed inset-0 z-50 flex min-h-svh w-full flex-col bg-background">
+				<OpenProjectScreen
+					gitLoadError={error}
+					onOpened={async () => {
+						selectFile(null);
+						await refresh();
+					}}
+				/>
+			</div>
 		);
 	}
 
-	return (
-		<>
-			<AppSidebar />
-			<AppContent />
-		</>
-	);
+	return <AppSidebar />;
 }
 
 function App() {
@@ -111,8 +106,9 @@ function App() {
 		<WorkspaceProvider>
 			<SidebarProvider>
 				<SidebarGitProvider>
-					<AppShell />
+					<SidebarGitColumn />
 				</SidebarGitProvider>
+				<AppContent />
 			</SidebarProvider>
 		</WorkspaceProvider>
 	);
