@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
-import { ProjectProvider } from "./context/project-context";
 import type { GeodesicRpcClient } from "@/lib/geodesic-rpc";
 
 const LOG = "[geodesic:webview]";
@@ -31,9 +30,7 @@ async function init() {
 	console.log(`${LOG} mounting React root`);
 	createRoot(document.getElementById("root")!).render(
 		<StrictMode>
-			<ProjectProvider>
-				<App />
-			</ProjectProvider>
+			<App />
 		</StrictMode>,
 	);
 }

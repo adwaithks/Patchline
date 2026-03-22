@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarChanges } from "@/components/sidebar-changes";
 import { SidebarFileTree } from "@/components/sidebar-file-tree";
-import { useProject } from "@/context/project-context";
+import { useSidebarGit } from "@/context/sidebar-git-context";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const { data, loading } = useProject();
+	const { data, loading } = useSidebarGit();
 
 	return (
 		<Sidebar {...props}>

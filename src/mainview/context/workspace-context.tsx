@@ -5,34 +5,34 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
-import { useProjectData, type ProjectData } from "@/hooks/use-project-data";
 import type { SelectedFileChange } from "../../shared/types";
 
-type ProjectContextValue = {
-	data: ProjectData | null;
-	loading: boolean;
-	error: string | null;
+type WorkspaceContextValue = {
+	/** Absolute project root — updated when git data first reports it (not on every poll churn). */
+	sourcePath: string | null;
+	setSourcePath: (path: string) => void;
 	selectedFile: SelectedFileChange | null;
 	selectFile: (file: SelectedFileChange | null) => void;
-	refresh: () => void;
 };
 
-const ProjectContext = createContext<ProjectContextValue>({
-	data: null,
-	loading: true,
-	error: null,
+const WorkspaceContext = createContext<WorkspaceContextValue>({
+	sourcePath: null,
+	setSourcePath: () => {},
 	selectedFile: null,
 	selectFile: () => {},
-	refresh: () => {},
 });
 
 const LOG = "[geodesic:webview]";
 
-export function ProjectProvider({ children }: { children: ReactNode }) {
-	const projectData = useProjectData();
+export function WorkspaceProvider({ children }: { children: ReactNode }) {
+	const [sourcePath, setSourcePathState] = useState<string | null>(null);
 	const [selectedFile, setSelectedFile] = useState<SelectedFileChange | null>(
 		null,
 	);
+
+	const setSourcePath = useCallback((path: string) => {
+		setSourcePathState(path);
+	}, []);
 
 	const selectFile = useCallback((file: SelectedFileChange | null) => {
 		if (file) {
@@ -45,19 +45,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	return (
-		<ProjectContext.Provider
+		<WorkspaceContext.Provider
 			value={{
-				...projectData,
+				sourcePath,
+				setSourcePath,
 				selectedFile,
 				selectFile,
-				refresh: projectData.refresh,
 			}}
 		>
 			{children}
-		</ProjectContext.Provider>
+		</WorkspaceContext.Provider>
 	);
 }
 
-export function useProject() {
-	return useContext(ProjectContext);
+export function useWorkspace() {
+	return useContext(WorkspaceContext);
 }

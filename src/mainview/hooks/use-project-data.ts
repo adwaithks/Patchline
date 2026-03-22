@@ -16,22 +16,13 @@ export function useProjectData() {
 	const [error, setError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
-		console.log(`${LOG} useProjectData: fetching project…`);
 		try {
 			const rpc = getGeodesicRPC();
 			if (!rpc) {
-				console.log(
-					`${LOG} useProjectData: no RPC — using empty dev preview data`,
-				);
 				setData({ sourcePath: "(dev preview)", tree: [], changes: [] });
 				return;
 			}
 			const result = await rpc.request.getProjectData();
-			console.log(`${LOG} useProjectData: getProjectData ok`, {
-				sourcePath: result.sourcePath,
-				treeRoots: result.tree?.length ?? 0,
-				changes: result.changes?.length ?? 0,
-			});
 			setData(result);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : "Failed to load";
@@ -44,6 +35,16 @@ export function useProjectData() {
 
 	useEffect(() => {
 		load();
+	}, [load]);
+
+	// Poll git snapshot ~1s — only consumed under SidebarGitProvider so main panel doesn’t re-render.
+	useEffect(() => {
+		const rpc = getGeodesicRPC();
+		if (!rpc) return;
+		const id = setInterval(() => {
+			load();
+		}, 1000);
+		return () => clearInterval(id);
 	}, [load]);
 
 	return { data, loading, error, refresh: load };

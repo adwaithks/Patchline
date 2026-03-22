@@ -8,10 +8,17 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useProject } from "@/context/project-context";
+import { useSidebarGit } from "@/context/sidebar-git-context";
+import { useWorkspace } from "@/context/workspace-context";
 import { FileIcon } from "@/lib/file-icon";
+import { cn } from "@/lib/utils";
 import { getGeodesicRPC } from "@/lib/geodesic-rpc";
 import type { DiffScope, FileChange } from "../../shared/types";
+
+/** Porcelain `D` in either column — file deleted in index and/or worktree. */
+function isDeletedChange(c: FileChange): boolean {
+	return c.indexState === "D" || c.worktreeState === "D";
+}
 
 interface SidebarChangesProps {
 	changes: FileChange[];
@@ -38,11 +45,13 @@ function FileList({
 	actionTitle: string;
 	onAction: (f: FileChange) => void;
 }) {
-	const { selectedFile, selectFile } = useProject();
+	const { selectedFile, selectFile } = useWorkspace();
 	return (
 		<SidebarMenu>
 			{items.map((item) => {
 				const { name, dir } = splitPath(item.path);
+				const deleted = isDeletedChange(item);
+				const strike = deleted ? "line-through" : "";
 				return (
 					<SidebarMenuItem key={`${item.path}-${diffScope}`}>
 						<SidebarMenuButton
@@ -54,9 +63,22 @@ function FileList({
 							onClick={() => selectFile({ ...item, diffScope })}
 						>
 							<FileIcon path={item.path} className="shrink-0" />
-							<span className="truncate font-medium">{name}</span>
+							<span
+								className={cn(
+									"truncate font-medium",
+									strike,
+									deleted && "text-muted-foreground",
+								)}
+							>
+								{name}
+							</span>
 							{dir && (
-								<span className="truncate text-[11px] text-muted-foreground/50 ml-1.5">
+								<span
+									className={cn(
+										"truncate text-[11px] text-muted-foreground/50 ml-1.5",
+										strike,
+									)}
+								>
 									{dir}
 								</span>
 							)}
@@ -79,7 +101,7 @@ function FileList({
 }
 
 export function SidebarChanges({ changes }: SidebarChangesProps) {
-	const { refresh } = useProject();
+	const { refresh } = useSidebarGit();
 
 	async function stage(f: FileChange) {
 		await getGeodesicRPC()?.request.stageFile({ filePath: f.path });

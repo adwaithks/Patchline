@@ -8,11 +8,12 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProject } from "@/context/project-context";
+import { SidebarGitProvider } from "@/context/sidebar-git-context";
+import { useWorkspace, WorkspaceProvider } from "@/context/workspace-context";
 import type { DiffLayoutMode } from "@/types/diff-layout";
 
 function AppContent() {
-	const { data, selectedFile } = useProject();
+	const { sourcePath, selectedFile } = useWorkspace();
 	const { open } = useSidebar();
 	const [diffLayout, setDiffLayout] = useState<DiffLayoutMode>("unified");
 
@@ -27,9 +28,7 @@ function AppContent() {
 			>
 				<SidebarTrigger className="-ml-1 electrobun-webkit-app-region-no-drag shrink-0" />
 				<span className="text-xs text-muted-foreground truncate select-none min-w-0 flex-1 direction-rtl">
-					{selectedFile?.path ??
-						data?.sourcePath ??
-						"Select a file to view"}
+					{selectedFile?.path ?? sourcePath ?? "Select a file to view"}
 				</span>
 				{selectedFile ? (
 					<Tabs
@@ -71,10 +70,14 @@ function AppContent() {
 
 function App() {
 	return (
-		<SidebarProvider>
-			<AppSidebar />
-			<AppContent />
-		</SidebarProvider>
+		<WorkspaceProvider>
+			<SidebarProvider>
+				<SidebarGitProvider>
+					<AppSidebar />
+				</SidebarGitProvider>
+				<AppContent />
+			</SidebarProvider>
+		</WorkspaceProvider>
 	);
 }
 
