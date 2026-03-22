@@ -113,6 +113,16 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 		refresh();
 	}
 
+	async function stageAll() {
+		await getGeodesicRPC()?.request.stageAll();
+		refresh();
+	}
+
+	async function unstageAll() {
+		await getGeodesicRPC()?.request.unstageAll();
+		refresh();
+	}
+
 	// Staged: index column is non-space, non-?
 	const staged = changes.filter(
 		(c) => c.indexState !== " " && c.indexState !== "?",
@@ -137,8 +147,19 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 		<>
 			{staged.length > 0 && (
 				<SidebarGroup>
-					<SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
-						Staged
+					<SidebarGroupLabel className="flex flex-row items-center justify-between gap-2 pr-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
+						<span>Staged</span>
+						<button
+							type="button"
+							title="Unstage all"
+							className="electrobun-webkit-app-region-no-drag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+							onClick={(e) => {
+								e.preventDefault();
+								void unstageAll();
+							}}
+						>
+							<Minus className="size-3.5" />
+						</button>
 					</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<FileList
@@ -153,8 +174,19 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 			)}
 			{unstaged.length > 0 && (
 				<SidebarGroup>
-					<SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
-						Changes
+					<SidebarGroupLabel className="flex flex-row items-center justify-between gap-2 pr-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
+						<span>Changes</span>
+						<button
+							type="button"
+							title="Stage all"
+							className="electrobun-webkit-app-region-no-drag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+							onClick={(e) => {
+								e.preventDefault();
+								void stageAll();
+							}}
+						>
+							<Plus className="size-3.5" />
+						</button>
 					</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<FileList

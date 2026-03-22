@@ -48,6 +48,14 @@ export type GeodesicRPCType = {
 				params: { filePath: string };
 				response: { ok: boolean };
 			};
+			stageAll: {
+				params: void;
+				response: { ok: boolean };
+			};
+			unstageAll: {
+				params: void;
+				response: { ok: boolean };
+			};
 		};
 		messages: Record<never, never>;
 	}>;

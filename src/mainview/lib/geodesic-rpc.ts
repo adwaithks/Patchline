@@ -19,6 +19,8 @@ export type GeodesicRpcClient = {
 		}) => Promise<FileDiff>;
 		stageFile: (params: { filePath: string }) => Promise<{ ok: boolean }>;
 		unstageFile: (params: { filePath: string }) => Promise<{ ok: boolean }>;
+		stageAll: () => Promise<{ ok: boolean }>;
+		unstageAll: () => Promise<{ ok: boolean }>;
 	};
 };
 
