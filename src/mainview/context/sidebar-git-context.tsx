@@ -27,15 +27,16 @@ export function SidebarGitProvider({ children }: { children: ReactNode }) {
 	const { setSourcePath } = useWorkspace();
 
 	useEffect(() => {
-		const p = projectData.data?.sourcePath;
-		if (p === undefined) return;
-		if (p === "(dev preview)") return;
-		if (p === null) {
+		const repos = projectData.data?.repos;
+		if (repos === undefined) return;
+		const first = repos[0]?.root;
+		if (first === "(dev preview)") return;
+		if (!first) {
 			setSourcePath(null);
 			return;
 		}
-		setSourcePath(p);
-	}, [projectData.data?.sourcePath, setSourcePath]);
+		setSourcePath(first);
+	}, [projectData.data?.repos, setSourcePath]);
 
 	return (
 		<SidebarGitContext.Provider value={projectData}>

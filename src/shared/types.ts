@@ -11,7 +11,11 @@ export type FileChange = {
 /** Which sidebar bucket the user opened the diff from (matters when a file is both staged and unstaged, i.e. MM). */
 export type DiffScope = "staged" | "unstaged";
 
-export type SelectedFileChange = FileChange & { diffScope: DiffScope };
+export type SelectedFileChange = FileChange & {
+	diffScope: DiffScope;
+	/** Absolute repository root this file belongs to. */
+	repoRoot: string;
+};
 
 export type FileDiff = {
 	filePath: string;
@@ -30,50 +34,62 @@ export type BranchInfo = {
 	detached: boolean;
 };
 
+/** One tracked repository’s snapshot for the sidebar. */
+export type RepoSnapshot = {
+	/** Absolute path to the repo root. */
+	root: string;
+	changes: FileChange[];
+	branch: BranchInfo;
+};
+
 export type PatchlineRPCType = {
 	bun: RPCSchema<{
 		requests: {
 			getProjectData: {
 				params: void;
 				response: {
-					/** `null` until the user opens a folder (or `PATCHLINE_SOURCE` is set at launch). */
-					sourcePath: string | null;
-					changes: FileChange[];
-					branch: BranchInfo;
+					/** Empty until at least one folder is added (or `PATCHLINE_SOURCE` at launch). */
+					repos: RepoSnapshot[];
 				};
 			};
 			openProjectFolder: {
 				params: void;
 				response: {
 					ok: boolean;
-					/** Absolute path when `ok`; otherwise `null`. */
+					/** First successfully added path when `ok`; otherwise `null`. */
 					path: string | null;
-					/** Set when the user picked a folder that is not a Git repo, etc. */
+					/** Every repo root added in this dialog session (multi-select). */
+					paths: string[];
+					/** Set when nothing valid was added (e.g. not Git, or dialog error). */
 					error: string | null;
 				};
 			};
 			getFileDiff: {
-				params: { filePath: string; diffScope: DiffScope };
+				params: {
+					repoRoot: string;
+					filePath: string;
+					diffScope: DiffScope;
+				};
 				response: FileDiff;
 			};
 			stageFile: {
-				params: { filePath: string };
+				params: { repoRoot: string; filePath: string };
 				response: { ok: boolean };
 			};
 			unstageFile: {
-				params: { filePath: string };
+				params: { repoRoot: string; filePath: string };
 				response: { ok: boolean };
 			};
 			stageAll: {
-				params: void;
+				params: { repoRoot: string };
 				response: { ok: boolean };
 			};
 			unstageAll: {
-				params: void;
+				params: { repoRoot: string };
 				response: { ok: boolean };
 			};
 			commit: {
-				params: { title: string; description: string };
+				params: { repoRoot: string; title: string; description: string };
 				response: { ok: boolean };
 			};
 		};

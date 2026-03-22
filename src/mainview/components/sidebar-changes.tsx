@@ -34,6 +34,7 @@ function isDeletedChange(c: FileChange): boolean {
 }
 
 interface SidebarChangesProps {
+	repoRoot: string;
 	changes: FileChange[];
 }
 
@@ -43,12 +44,14 @@ function fileBaseName(fullPath: string): string {
 }
 
 function FileList({
+	repoRoot,
 	items,
 	diffScope,
 	actionIcon,
 	actionTitle,
 	onAction,
 }: {
+	repoRoot: string;
 	items: FileChange[];
 	diffScope: DiffScope;
 	actionIcon: React.ReactNode;
@@ -57,28 +60,41 @@ function FileList({
 }) {
 	const { selectedFile, selectFile } = useWorkspace();
 	return (
-		<SidebarMenu>
+		<SidebarMenu className="gap-[0.5px]">
 			{items.map((item) => {
 				const name = fileBaseName(item.path);
 				const deleted = isDeletedChange(item);
-				const strike = deleted ? "line-through" : "";
 				return (
-					<SidebarMenuItem key={`${item.path}-${diffScope}`}>
+					<SidebarMenuItem
+						key={`${repoRoot}-${item.path}-${diffScope}`}
+					>
 						<SidebarMenuButton
-							className="pr-8 items-center"
+							size="sm"
+							className={cn(
+								"h-6 min-h-6 gap-1.5 px-1.5 py-0 pr-8 text-[12px] leading-tight [&>svg]:!size-3",
+								deleted &&
+									"text-rose-300/90 hover:text-rose-200/95 active:text-rose-200/95 data-[active=true]:text-rose-200",
+							)}
 							title={item.path}
 							isActive={
+								selectedFile?.repoRoot === repoRoot &&
 								selectedFile?.path === item.path &&
 								selectedFile?.diffScope === diffScope
 							}
-							onClick={() => selectFile({ ...item, diffScope })}
+							onClick={() =>
+								selectFile({ ...item, diffScope, repoRoot })
+							}
 						>
-							<FileIcon path={item.path} className="shrink-0" />
+							<FileIcon
+								path={item.path}
+								className={
+									deleted ? "[&_svg]:opacity-90" : undefined
+								}
+							/>
 							<span
 								className={cn(
-									"truncate text-[13px]",
-									strike,
-									deleted && "text-muted-foreground",
+									"truncate",
+									deleted && "line-through",
 								)}
 							>
 								{name}
@@ -101,7 +117,7 @@ function FileList({
 	);
 }
 
-export function SidebarChanges({ changes }: SidebarChangesProps) {
+export function SidebarChanges({ repoRoot, changes }: SidebarChangesProps) {
 	const { refresh } = useSidebarGit();
 	const { selectFile } = useWorkspace();
 	const [commitOpen, setCommitOpen] = useState(false);
@@ -110,22 +126,28 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 	const [committing, setCommitting] = useState(false);
 
 	async function stage(f: FileChange) {
-		await getPatchlineRPC()?.request.stageFile({ filePath: f.path });
+		await getPatchlineRPC()?.request.stageFile({
+			repoRoot,
+			filePath: f.path,
+		});
 		refresh();
 	}
 
 	async function unstage(f: FileChange) {
-		await getPatchlineRPC()?.request.unstageFile({ filePath: f.path });
+		await getPatchlineRPC()?.request.unstageFile({
+			repoRoot,
+			filePath: f.path,
+		});
 		refresh();
 	}
 
 	async function stageAll() {
-		await getPatchlineRPC()?.request.stageAll();
+		await getPatchlineRPC()?.request.stageAll({ repoRoot });
 		refresh();
 	}
 
 	async function unstageAll() {
-		await getPatchlineRPC()?.request.unstageAll();
+		await getPatchlineRPC()?.request.unstageAll({ repoRoot });
 		refresh();
 	}
 
@@ -136,6 +158,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 		setCommitting(true);
 		try {
 			const res = await getPatchlineRPC()?.request.commit({
+				repoRoot,
 				title,
 				description: commitDescription,
 			});
@@ -151,20 +174,18 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 		}
 	}
 
-	// Staged: index column is non-space, non-?
 	const staged = changes.filter(
 		(c) => c.indexState !== " " && c.indexState !== "?",
 	);
 
-	// Unstaged: worktree has any change (includes untracked where both X=? Y=?)
 	const unstaged = changes.filter((c) => c.worktreeState !== " ");
 
 	if (changes.length === 0) {
 		return (
-			<SidebarGroup>
+			<SidebarGroup className="px-2 py-0">
 				<SidebarGroupContent>
-					<p className="px-3 py-4 text-xs text-muted-foreground">
-						No changes detected.
+					<p className="px-1.5 py-3 text-xs text-muted-foreground">
+						No changes.
 					</p>
 				</SidebarGroupContent>
 			</SidebarGroup>
@@ -175,8 +196,8 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 		<>
 			{staged.length > 0 && (
 				<>
-					<SidebarGroup>
-						<SidebarGroupLabel className="flex flex-row items-center justify-between gap-2 pr-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
+					<SidebarGroup className="px-2 py-0">
+						<SidebarGroupLabel className="flex h-auto min-h-0 flex-row items-center justify-between gap-2 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/60">
 							<span className="min-w-0 truncate">Staged</span>
 							<div className="flex shrink-0 items-center gap-0.5">
 								<Button
@@ -203,6 +224,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 						</SidebarGroupLabel>
 						<SidebarGroupContent>
 							<FileList
+								repoRoot={repoRoot}
 								items={staged}
 								diffScope="staged"
 								actionIcon={<Minus className="size-3" />}
@@ -288,8 +310,8 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 				</>
 			)}
 			{unstaged.length > 0 && (
-				<SidebarGroup>
-					<SidebarGroupLabel className="flex flex-row items-center justify-between gap-2 pr-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
+				<SidebarGroup className="px-2 py-0">
+					<SidebarGroupLabel className="flex h-auto min-h-0 flex-row items-center justify-between gap-2 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/60">
 						<span>Changes</span>
 						<button
 							type="button"
@@ -305,6 +327,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 					</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<FileList
+							repoRoot={repoRoot}
 							items={unstaged}
 							diffScope="unstaged"
 							actionIcon={<Plus className="size-3" />}

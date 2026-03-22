@@ -22,8 +22,6 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
 	selectFile: () => {},
 });
 
-const LOG = "[patchline:webview]";
-
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
 	const [sourcePath, setSourcePathState] = useState<string | null>(null);
 	const [selectedFile, setSelectedFile] = useState<SelectedFileChange | null>(
@@ -35,12 +33,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const selectFile = useCallback((file: SelectedFileChange | null) => {
-		if (file) {
-			console.log(`${LOG} selectFile`, {
-				path: file.path,
-				diffScope: file.diffScope,
-			});
-		}
 		setSelectedFile(file);
 	}, []);
 

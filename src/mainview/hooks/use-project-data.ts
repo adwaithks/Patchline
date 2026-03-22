@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { getPatchlineRPC } from "@/lib/patchline-rpc";
-import type { FileChange, BranchInfo } from "../../shared/types";
+import type { RepoSnapshot } from "../../shared/types";
 
 const LOG = "[patchline:webview]";
 
 export type ProjectData = {
-	sourcePath: string | null;
-	changes: FileChange[];
-	branch: BranchInfo;
+	repos: RepoSnapshot[];
 };
 
 export function useProjectData() {
@@ -20,13 +18,17 @@ export function useProjectData() {
 			const rpc = getPatchlineRPC();
 			if (!rpc) {
 				setData({
-					sourcePath: "(dev preview)",
-					changes: [],
-					branch: {
-						current: "—",
-						upstream: null,
-						detached: false,
-					},
+					repos: [
+						{
+							root: "(dev preview)",
+							changes: [],
+							branch: {
+								current: "—",
+								upstream: null,
+								detached: false,
+							},
+						},
+					],
 				});
 				return;
 			}

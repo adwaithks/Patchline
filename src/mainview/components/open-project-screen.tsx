@@ -22,7 +22,7 @@ export function OpenProjectScreen({
 		setPickError(null);
 		try {
 			const res = await rpc.request.openProjectFolder();
-			if (res.ok && res.path) {
+			if (res.ok && res.paths.length > 0) {
 				await onOpened();
 			} else if (res.error) {
 				setPickError(res.error);
@@ -41,15 +41,19 @@ export function OpenProjectScreen({
 					<FolderOpen className="size-7 text-zinc-400" strokeWidth={1.5} />
 				</div>
 				<h1 className="text-lg font-semibold tracking-tight text-zinc-100">
-					Open a project
+					Add a repository
 				</h1>
 				<p className="text-sm leading-relaxed text-zinc-500">
-					Choose a folder that contains a Git repository. You can also launch
-					Patchline with{" "}
+					Choose one or more folders; each must be a Git repository (use your
+					system’s usual modifier keys to multi-select in the dialog). After
+					the first batch, use{" "}
+					<span className="text-zinc-400">Add repository</span> in the top bar
+					(folder icon).
+					You can also launch Patchline with{" "}
 					<code className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-400">
 						PATCHLINE_SOURCE=/path/to/repo
 					</code>{" "}
-					to skip this step.
+					to seed an initial repo.
 				</p>
 				{banner ? (
 					<p className="w-full rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-left text-xs text-red-200/90">
@@ -63,7 +67,7 @@ export function OpenProjectScreen({
 					disabled={busy}
 					onClick={() => void handleOpenProject()}
 				>
-					{busy ? "Opening…" : "Choose folder…"}
+					{busy ? "Opening…" : "Choose folders…"}
 				</Button>
 			</div>
 		</div>

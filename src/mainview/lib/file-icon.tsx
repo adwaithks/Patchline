@@ -108,8 +108,7 @@ const BRAND_BY_BASENAME: Record<string, IconType> = {
 	"setupTests.tsx": SiJest,
 };
 
-const TEST_JS_EXT_RE =
-	/\.(test|spec)\.(mjs|cjs|mts|cts|jsx?|tsx?)$/;
+const TEST_JS_EXT_RE = /\.(test|spec)\.(mjs|cjs|mts|cts|jsx?|tsx?)$/;
 
 function isUnderTestsDir(path: string): boolean {
 	return /[/\\]__tests__[/\\]/i.test(path);
@@ -204,13 +203,9 @@ const BRAND_BY_EXT: Record<string, IconType> = {
 };
 
 /** `!size-3` wins over `SidebarMenuButton`’s `[&>svg]:size-4` */
-const baseIconClass = (className?: string) =>
-	cn("!size-3 shrink-0", className);
+const baseIconClass = (className?: string) => cn("!size-3 shrink-0", className);
 
-function renderLucide(
-	Icon: typeof Code,
-	className?: string,
-): ReactElement {
+function renderLucide(Icon: typeof Code, className?: string): ReactElement {
 	const cls = baseIconClass(className);
 	return <Icon className={cls} aria-hidden />;
 }

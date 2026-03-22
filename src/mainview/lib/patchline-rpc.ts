@@ -1,32 +1,32 @@
-import type {
-	FileDiff,
-	FileChange,
-	DiffScope,
-	BranchInfo,
-} from "../../shared/types";
+import type { FileDiff, DiffScope, RepoSnapshot } from "../../shared/types";
 
 /** Webview client that calls Bun-side RPC request handlers */
 export type PatchlineRpcClient = {
 	request: {
-		getProjectData: () => Promise<{
-			sourcePath: string | null;
-			changes: FileChange[];
-			branch: BranchInfo;
-		}>;
+		getProjectData: () => Promise<{ repos: RepoSnapshot[] }>;
 		openProjectFolder: () => Promise<{
 			ok: boolean;
 			path: string | null;
+			paths: string[];
 			error: string | null;
 		}>;
 		getFileDiff: (params: {
+			repoRoot: string;
 			filePath: string;
 			diffScope: DiffScope;
 		}) => Promise<FileDiff>;
-		stageFile: (params: { filePath: string }) => Promise<{ ok: boolean }>;
-		unstageFile: (params: { filePath: string }) => Promise<{ ok: boolean }>;
-		stageAll: () => Promise<{ ok: boolean }>;
-		unstageAll: () => Promise<{ ok: boolean }>;
+		stageFile: (params: {
+			repoRoot: string;
+			filePath: string;
+		}) => Promise<{ ok: boolean }>;
+		unstageFile: (params: {
+			repoRoot: string;
+			filePath: string;
+		}) => Promise<{ ok: boolean }>;
+		stageAll: (params: { repoRoot: string }) => Promise<{ ok: boolean }>;
+		unstageAll: (params: { repoRoot: string }) => Promise<{ ok: boolean }>;
 		commit: (params: {
+			repoRoot: string;
 			title: string;
 			description: string;
 		}) => Promise<{ ok: boolean }>;

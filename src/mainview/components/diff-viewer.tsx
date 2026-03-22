@@ -28,6 +28,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 					return;
 				}
 				const result: FileDiff = await rpc.request.getFileDiff({
+					repoRoot: file.repoRoot,
 					filePath: file.path,
 					diffScope: file.diffScope,
 				});
@@ -42,7 +43,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 		}
 
 		load();
-	}, [file.path, file.diffScope]);
+	}, [file.path, file.diffScope, file.repoRoot]);
 
 	if (loading) {
 		return (
@@ -81,7 +82,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 	return (
 		<div className="flex-1 overflow-auto" style={{ fontSize: 12 }}>
 			<DiffView
-				key={`${file.path}-${layout}`}
+				key={`${file.repoRoot}-${file.path}-${layout}`}
 				data={{
 					oldFile: {
 						fileName,

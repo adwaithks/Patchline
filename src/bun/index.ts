@@ -14,10 +14,20 @@ import type {
 	FileDiff,
 	DiffScope,
 	BranchInfo,
+	RepoSnapshot,
 } from "../shared/types";
 
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
+
+const BLOG = "[patchline:bun]";
+
+function repoKey(path: string): string {
+	return resolve(path);
+}
+
+const repoByRoot = new Map<string, SimpleGit>();
+const repoOrder: string[] = [];
 
 function getInitialWorkspaceRoot(): string | null {
 	const fromEnv = process.env.PATCHLINE_SOURCE?.trim();
@@ -25,20 +35,27 @@ function getInitialWorkspaceRoot(): string | null {
 	return resolve(fromEnv);
 }
 
-let workspaceRoot: string | null = getInitialWorkspaceRoot();
-let repoGit: SimpleGit | null = workspaceRoot ? simpleGit(workspaceRoot) : null;
+function ensureRepo(absRoot: string): SimpleGit {
+	const key = repoKey(absRoot);
+	if (!repoByRoot.has(key)) {
+		repoByRoot.set(key, simpleGit(key));
+		repoOrder.push(key);
+	}
+	return repoByRoot.get(key)!;
+}
 
-const BLOG = "[patchline:bun]";
+const initialRoot = getInitialWorkspaceRoot();
+if (initialRoot) {
+	ensureRepo(initialRoot);
+}
+
 console.log(`${BLOG} process starting`, {
-	workspaceRoot,
-	hasGit: Boolean(repoGit),
+	repoCount: repoOrder.length,
+	repos: repoOrder,
 });
 
-function requireGit(): SimpleGit {
-	if (!repoGit) {
-		throw new Error("No Git repository is open");
-	}
-	return repoGit;
+function getGitOrNull(root: string): SimpleGit | null {
+	return repoByRoot.get(repoKey(root)) ?? null;
 }
 
 type PorcelainChar = FileChange["indexState"];
@@ -49,7 +66,6 @@ function normalizePorcelainChar(c: string): PorcelainChar {
 	return (allowed.has(ch) ? ch : " ") as PorcelainChar;
 }
 
-// Read git status (simple-git parses porcelain into files[])
 async function getGitChanges(git: SimpleGit): Promise<FileChange[]> {
 	try {
 		const status = await git.status();
@@ -141,11 +157,12 @@ async function commitStaged(
 	}
 }
 
-// `git diff --no-index` often exits 1 with empty stderr; simple-git still resolves `raw()`
-// with the diff text. Use the return value (do not discard it after await).
-async function diffNoIndex(repoRelativePath: string): Promise<string> {
+async function diffNoIndex(
+	git: SimpleGit,
+	repoRelativePath: string,
+): Promise<string> {
 	try {
-		const out = await requireGit().raw([
+		const out = await git.raw([
 			"diff",
 			"--no-color",
 			"--no-index",
@@ -160,38 +177,34 @@ async function diffNoIndex(repoRelativePath: string): Promise<string> {
 	}
 }
 
-async function showHead(filePath: string): Promise<string> {
+async function showHead(git: SimpleGit, filePath: string): Promise<string> {
 	try {
-		return (await requireGit().show([`HEAD:${filePath}`])).replace(
-			/\r\n/g,
-			"\n",
-		);
+		return (await git.show([`HEAD:${filePath}`])).replace(/\r\n/g, "\n");
 	} catch {
 		return "";
 	}
 }
 
-/** Staged snapshot (index / next commit), when present */
-async function showIndex(filePath: string): Promise<string> {
+async function showIndex(git: SimpleGit, filePath: string): Promise<string> {
 	try {
-		return (await requireGit().raw(["show", `:${filePath}`])).replace(
-			/\r\n/g,
-			"\n",
-		);
+		return (await git.raw(["show", `:${filePath}`])).replace(/\r\n/g, "\n");
 	} catch {
 		return "";
 	}
 }
 
 async function getFileDiff(
+	repoRoot: string,
 	filePath: string,
 	diffScope: DiffScope,
 ): Promise<FileDiff> {
-	if (!workspaceRoot || !repoGit) {
+	const root = repoKey(repoRoot);
+	const git = getGitOrNull(root);
+	if (!git) {
 		return { filePath, oldContent: "", newContent: "", hunks: "" };
 	}
 
-	const absPath = join(workspaceRoot, filePath);
+	const absPath = join(root, filePath);
 
 	const worktree = (() => {
 		try {
@@ -201,27 +214,27 @@ async function getFileDiff(
 		}
 	})();
 
-	const { files } = await requireGit().status(["--", filePath]);
+	const { files } = await git.status(["--", filePath]);
 	const { index = " ", working_dir = " " } = files[0] ?? {};
 
 	const isUntracked = index === "?" && working_dir === "?";
 	const hasStaged = index !== " " && index !== "?";
 	const hasUnstaged = working_dir !== " ";
 
-	const headContent = await showHead(filePath);
-	const indexContent = isUntracked ? "" : await showIndex(filePath);
+	const headContent = await showHead(git, filePath);
+	const indexContent = isUntracked ? "" : await showIndex(git, filePath);
 
 	let rawDiff = "";
 	let oldContent = "";
 	let newContent = "";
 
 	if (isUntracked) {
-		rawDiff = await diffNoIndex(filePath);
+		rawDiff = await diffNoIndex(git, filePath);
 		oldContent = "";
 		newContent = worktree;
 	} else if (diffScope === "staged" && hasStaged) {
 		try {
-			rawDiff = await requireGit().raw([
+			rawDiff = await git.raw([
 				"diff",
 				"--no-color",
 				"--cached",
@@ -235,9 +248,8 @@ async function getFileDiff(
 		oldContent = headContent;
 		newContent = indexContent;
 	} else if (diffScope === "unstaged" && hasUnstaged) {
-		// Worktree vs index (what you’re still editing on top of staging)
 		try {
-			rawDiff = await requireGit().raw([
+			rawDiff = await git.raw([
 				"diff",
 				"--no-color",
 				"--",
@@ -262,13 +274,17 @@ async function getFileDiff(
 	};
 }
 
-const emptyBranch: BranchInfo = {
-	current: "—",
-	upstream: null,
-	detached: false,
-};
+function windowTitleFromRepos(): string {
+	if (repoOrder.length === 0) return "Patchline";
+	if (repoOrder.length === 1) return `Patchline — ${repoOrder[0]}`;
+	return `Patchline — ${repoOrder.length} repos`;
+}
 
 const mainWindowHolder: { w: BrowserWindow | null } = { w: null };
+
+function refreshWindowTitle() {
+	mainWindowHolder.w?.setTitle(windowTitleFromRepos());
+}
 
 // ---- RPC ----
 const rpc = BrowserView.defineRPC<PatchlineRPCType>({
@@ -276,76 +292,97 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 	handlers: {
 		requests: {
 			getProjectData: async () => {
-				console.log(`${BLOG} RPC getProjectData`);
-				if (!workspaceRoot || !repoGit) {
-					return {
-						sourcePath: null,
-						changes: [],
-						branch: emptyBranch,
-					};
+				const repos: RepoSnapshot[] = [];
+				for (const root of repoOrder) {
+					const git = repoByRoot.get(root);
+					if (!git) continue;
+					const [changes, branch] = await Promise.all([
+						getGitChanges(git),
+						getBranchInfo(git),
+					]);
+					repos.push({ root, changes, branch });
 				}
-				const [changes, branch] = await Promise.all([
-					getGitChanges(repoGit),
-					getBranchInfo(repoGit),
-				]);
-				console.log(`${BLOG} RPC getProjectData →`, {
-					changes: changes.length,
-					branch: branch.current,
-				});
-				return { sourcePath: workspaceRoot, changes, branch };
+				return { repos };
 			},
 			openProjectFolder: async () => {
 				const picked = await Utils.openFileDialog({
 					canChooseFiles: false,
 					canChooseDirectory: true,
-					allowsMultipleSelection: false,
+					allowsMultipleSelection: true,
 				});
-				const raw = picked.map((s) => s.trim()).find(Boolean);
-				if (!raw) {
-					return { ok: false, path: null, error: null };
+				const rawPaths = picked.map((s) => s.trim()).filter(Boolean);
+				if (rawPaths.length === 0) {
+					return { ok: false, path: null, paths: [], error: null };
 				}
-				const path = resolve(raw);
-				const isRepo = await simpleGit(path).checkIsRepo();
-				if (!isRepo) {
-					return {
-						ok: false,
-						path: null,
-						error: "That folder is not a Git repository (no .git).",
-					};
+
+				const added: string[] = [];
+				const seen = new Set<string>();
+				let skippedNonRepo = 0;
+
+				for (const raw of rawPaths) {
+					const abs = resolve(raw);
+					const key = repoKey(abs);
+					if (seen.has(key)) continue;
+					seen.add(key);
+
+					const isRepo = await simpleGit(abs).checkIsRepo();
+					if (!isRepo) {
+						skippedNonRepo += 1;
+						continue;
+					}
+					ensureRepo(abs);
+					added.push(key);
 				}
-				workspaceRoot = path;
-				repoGit = simpleGit(path);
-				mainWindowHolder.w?.setTitle(`Patchline — ${path}`);
-				console.log(`${BLOG} opened project`, { path });
-				return { ok: true, path, error: null };
+
+				refreshWindowTitle();
+
+				if (added.length === 0) {
+					const error =
+						skippedNonRepo === 1
+							? "That folder is not a Git repository (no .git)."
+							: `None of the selected folders are Git repositories (${skippedNonRepo} folders).`;
+					return { ok: false, path: null, paths: [], error };
+				}
+
+				console.log(`${BLOG} added repo(s)`, {
+					paths: added,
+					total: repoOrder.length,
+					skippedNonRepo,
+				});
+				return {
+					ok: true,
+					path: added[0]!,
+					paths: added,
+					error: null,
+				};
 			},
-			getFileDiff: async ({ filePath, diffScope }) => {
-				return getFileDiff(filePath, diffScope);
+			getFileDiff: async ({ repoRoot, filePath, diffScope }) => {
+				return getFileDiff(repoRoot, filePath, diffScope);
 			},
-			stageFile: async ({ filePath }) => {
-				console.log(`${BLOG} RPC stageFile`, { filePath });
-				if (!repoGit) return { ok: false };
-				return stagePath(repoGit, filePath);
+			stageFile: async ({ repoRoot, filePath }) => {
+				const git = getGitOrNull(repoRoot);
+				if (!git) return { ok: false };
+				return stagePath(git, filePath);
 			},
-			unstageFile: async ({ filePath }) => {
-				console.log(`${BLOG} RPC unstageFile`, { filePath });
-				if (!repoGit) return { ok: false };
-				return unstagePath(repoGit, filePath);
+			unstageFile: async ({ repoRoot, filePath }) => {
+				const git = getGitOrNull(repoRoot);
+				if (!git) return { ok: false };
+				return unstagePath(git, filePath);
 			},
-			stageAll: async () => {
-				console.log(`${BLOG} RPC stageAll`);
-				if (!repoGit) return { ok: false };
-				return stageAll(repoGit);
+			stageAll: async ({ repoRoot }) => {
+				const git = getGitOrNull(repoRoot);
+				if (!git) return { ok: false };
+				return stageAll(git);
 			},
-			unstageAll: async () => {
-				console.log(`${BLOG} RPC unstageAll`);
-				if (!repoGit) return { ok: false };
-				return unstageAll(repoGit);
+			unstageAll: async ({ repoRoot }) => {
+				const git = getGitOrNull(repoRoot);
+				if (!git) return { ok: false };
+				return unstageAll(git);
 			},
-			commit: async ({ title, description }) => {
-				console.log(`${BLOG} RPC commit`, { titleLen: title.length });
-				if (!repoGit) return { ok: false };
-				return commitStaged(repoGit, title, description);
+			commit: async ({ repoRoot, title, description }) => {
+				const git = getGitOrNull(repoRoot);
+				if (!git) return { ok: false };
+				return commitStaged(git, title, description);
 			},
 		},
 		messages: {},
@@ -365,7 +402,6 @@ async function getMainViewUrl(): Promise<string> {
 	return "views://mainview/index.html";
 }
 
-/** macOS menu bar: app name → Quit*/
 function setupApplicationMenu() {
 	ApplicationMenu.setApplicationMenu([
 		{
@@ -386,7 +422,7 @@ const url = await getMainViewUrl();
 setupApplicationMenu();
 
 const mainWindow = new BrowserWindow({
-	title: workspaceRoot ? `Patchline — ${workspaceRoot}` : "Patchline",
+	title: windowTitleFromRepos(),
 	url,
 	titleBarStyle: "hiddenInset",
 	transparent: false,
@@ -400,8 +436,10 @@ const mainWindow = new BrowserWindow({
 });
 mainWindowHolder.w = mainWindow;
 
-if (workspaceRoot) {
-	console.log(`Patchline started — watching: ${workspaceRoot}`);
+if (repoOrder.length > 0) {
+	console.log(
+		`Patchline started — ${repoOrder.length} repo(s): ${repoOrder.join(", ")}`,
+	);
 } else {
-	console.log("Patchline started — choose a repository from the app window");
+	console.log("Patchline started — add one or more repositories from the app");
 }
