@@ -101,7 +101,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 		layout === "unified" ? DiffModeEnum.Unified : DiffModeEnum.Split;
 
 	return (
-		<div className="flex-1 overflow-auto" style={{ fontSize: 13 }}>
+		<div className="flex-1 overflow-auto" style={{ fontSize: 12 }}>
 			<DiffView
 				key={`${file.path}-${layout}`}
 				data={{
@@ -120,7 +120,7 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 				diffViewTheme="dark"
 				diffViewHighlight
 				diffViewWrap
-				diffViewFontSize={14}
+				diffViewFontSize={13}
 			/>
 		</div>
 	);
