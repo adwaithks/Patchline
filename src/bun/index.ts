@@ -15,6 +15,11 @@ import type {
 	DiffScope,
 	BranchInfo,
 } from "../shared/types";
+import {
+	enableMacWindowVibrancy,
+	setMacWindowCornerRadius,
+	tryLoadPatchlineMacChrome,
+} from "./macos-chrome";
 
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
@@ -266,6 +271,13 @@ const emptyBranch: BranchInfo = {
 	detached: false,
 };
 
+const patchlineMacChrome = tryLoadPatchlineMacChrome();
+if (patchlineMacChrome) {
+	console.log(`${BLOG} macOS window chrome dylib loaded`);
+}
+
+const mainWindowHolder: { w: BrowserWindow | null } = { w: null };
+
 // ---- RPC ----
 const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 	maxRequestTime: 10000,
@@ -311,7 +323,7 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 				}
 				workspaceRoot = path;
 				repoGit = simpleGit(path);
-				mainWindow.setTitle(`Patchline — ${path}`);
+				mainWindowHolder.w?.setTitle(`Patchline — ${path}`);
 				console.log(`${BLOG} opened project`, { path });
 				return { ok: true, path, error: null };
 			},
@@ -344,6 +356,9 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 				if (!repoGit) return { ok: false };
 				return commitStaged(repoGit, title, description);
 			},
+			getChromeFlags: async () => ({
+				macWindowVibrancy: patchlineMacChrome,
+			}),
 		},
 		messages: {},
 	},
@@ -386,6 +401,7 @@ const mainWindow = new BrowserWindow({
 	title: workspaceRoot ? `Patchline — ${workspaceRoot}` : "Patchline",
 	url,
 	titleBarStyle: "hiddenInset",
+	transparent: patchlineMacChrome,
 	frame: {
 		width: 1200,
 		height: 800,
@@ -394,6 +410,12 @@ const mainWindow = new BrowserWindow({
 	},
 	rpc,
 });
+mainWindowHolder.w = mainWindow;
+
+if (patchlineMacChrome) {
+	enableMacWindowVibrancy(mainWindow.ptr);
+	setMacWindowCornerRadius(mainWindow.ptr, -1);
+}
 
 if (workspaceRoot) {
 	console.log(`Patchline started — watching: ${workspaceRoot}`);

@@ -22,6 +22,14 @@ async function init() {
 			new Electroview({ rpc });
 			window.__patchlineRPC = rpc as PatchlineRpcClient;
 			console.log(`${LOG} RPC ready (Electroview + __patchlineRPC set)`);
+			try {
+				const flags = await rpc.request.getChromeFlags();
+				if (flags.macWindowVibrancy) {
+					document.documentElement.classList.add("patchline-mac-vibrancy");
+				}
+			} catch (e) {
+				console.warn(`${LOG} getChromeFlags failed`, e);
+			}
 		} catch (err) {
 			console.error(`${LOG} RPC bootstrap failed`, err);
 		}

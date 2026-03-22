@@ -20,8 +20,12 @@ function AppContent() {
 	const [diffLayout, setDiffLayout] = useState<DiffLayoutMode>("unified");
 
 	return (
-		<SidebarInset className="flex flex-col h-svh overflow-hidden">
+		<SidebarInset
+			data-patchline-chrome="inset"
+			className="flex flex-col h-svh overflow-hidden"
+		>
 			<header
+				data-patchline-chrome="header"
 				className="flex h-10 shrink-0 items-center gap-2 border-b electrobun-webkit-app-region-drag"
 				style={{
 					paddingLeft: open ? "1rem" : "5rem",
@@ -86,7 +90,10 @@ function SidebarGitColumn() {
 
 	if (needsOpen) {
 		return (
-			<div className="fixed inset-0 z-50 flex min-h-svh w-full flex-col bg-background">
+			<div
+				data-patchline-chrome="modal"
+				className="fixed inset-0 z-50 flex min-h-svh w-full flex-col bg-background"
+			>
 				<OpenProjectScreen
 					gitLoadError={error}
 					onOpened={async () => {
