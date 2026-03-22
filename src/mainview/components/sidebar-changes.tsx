@@ -76,7 +76,7 @@ function FileList({
 							<FileIcon path={item.path} className="shrink-0" />
 							<span
 								className={cn(
-									"truncate font-medium",
+									"truncate text-[13px]",
 									strike,
 									deleted && "text-muted-foreground",
 								)}
@@ -226,28 +226,37 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 								<DialogHeader>
 									<DialogTitle>Commit</DialogTitle>
 									<DialogDescription>
-										Enter a title and optional description for this commit.
+										Enter a title and optional description
+										for this commit.
 									</DialogDescription>
 								</DialogHeader>
 								<div className="grid gap-4 py-4">
 									<div className="grid gap-2">
-										<Label htmlFor="commit-title">Title</Label>
+										<Label htmlFor="commit-title">
+											Title
+										</Label>
 										<Input
 											id="commit-title"
 											value={commitTitle}
-											onChange={(ev) => setCommitTitle(ev.target.value)}
+											onChange={(ev) =>
+												setCommitTitle(ev.target.value)
+											}
 											placeholder="Short summary"
 											autoFocus
 											disabled={committing}
 										/>
 									</div>
 									<div className="grid gap-2">
-										<Label htmlFor="commit-description">Description</Label>
+										<Label htmlFor="commit-description">
+											Description
+										</Label>
 										<Textarea
 											id="commit-description"
 											value={commitDescription}
 											onChange={(ev) =>
-												setCommitDescription(ev.target.value)
+												setCommitDescription(
+													ev.target.value,
+												)
 											}
 											placeholder="Optional body"
 											disabled={committing}
@@ -266,7 +275,9 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 									</Button>
 									<Button
 										type="submit"
-										disabled={!commitTitle.trim() || committing}
+										disabled={
+											!commitTitle.trim() || committing
+										}
 									>
 										{committing ? "Committing…" : "Commit"}
 									</Button>
