@@ -243,18 +243,23 @@ export function SidebarChanges({ repoRoot, changes }: SidebarChangesProps) {
 							}
 						}}
 					>
-						<DialogContent className="electrobun-webkit-app-region-no-drag sm:max-w-lg sm:rounded-xl">
+						<DialogContent className="electrobun-webkit-app-region-no-drag gap-3 p-4 text-[13px] sm:max-w-lg sm:rounded-xl">
 							<form onSubmit={handleCommitSubmit}>
-								<DialogHeader>
-									<DialogTitle>Commit</DialogTitle>
-									<DialogDescription>
+								<DialogHeader className="space-y-1">
+									<DialogTitle className="text-sm font-semibold leading-snug">
+										Commit
+									</DialogTitle>
+									<DialogDescription className="text-xs leading-relaxed">
 										Enter a title and optional description
 										for this commit.
 									</DialogDescription>
 								</DialogHeader>
-								<div className="grid gap-4 py-4">
-									<div className="grid gap-2">
-										<Label htmlFor="commit-title">
+								<div className="grid gap-3 py-3">
+									<div className="grid gap-1.5">
+										<Label
+											htmlFor="commit-title"
+											className="text-xs font-medium"
+										>
 											Title
 										</Label>
 										<Input
@@ -266,10 +271,14 @@ export function SidebarChanges({ repoRoot, changes }: SidebarChangesProps) {
 											placeholder="Short summary"
 											autoFocus
 											disabled={committing}
+											className="h-8 px-2.5 text-xs md:text-xs"
 										/>
 									</div>
-									<div className="grid gap-2">
-										<Label htmlFor="commit-description">
+									<div className="grid gap-1.5">
+										<Label
+											htmlFor="commit-description"
+											className="text-xs font-medium"
+										>
 											Description
 										</Label>
 										<Textarea
@@ -283,13 +292,16 @@ export function SidebarChanges({ repoRoot, changes }: SidebarChangesProps) {
 											placeholder="Optional body"
 											disabled={committing}
 											rows={4}
+											className="min-h-[4.5rem] resize-y px-2.5 py-2 text-xs md:text-xs"
 										/>
 									</div>
 								</div>
-								<DialogFooter>
+								<DialogFooter className="gap-2 sm:space-x-2">
 									<Button
 										type="button"
 										variant="outline"
+										size="sm"
+										className="h-8 text-xs"
 										onClick={() => setCommitOpen(false)}
 										disabled={committing}
 									>
@@ -297,6 +309,8 @@ export function SidebarChanges({ repoRoot, changes }: SidebarChangesProps) {
 									</Button>
 									<Button
 										type="submit"
+										size="sm"
+										className="h-8 text-xs"
 										disabled={
 											!commitTitle.trim() || committing
 										}
