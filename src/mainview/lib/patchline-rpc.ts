@@ -30,7 +30,6 @@ export type PatchlineRpcClient = {
 			title: string;
 			description: string;
 		}) => Promise<{ ok: boolean }>;
-		getChromeFlags: () => Promise<{ macWindowVibrancy: boolean }>;
 	};
 };
 

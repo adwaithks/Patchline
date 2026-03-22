@@ -42,30 +42,6 @@
 		--sidebar-ring: 217.2 91.2% 59.8%;
 	}
 
-	/* Transparent window; vibrancy shows through — avoid painting opaque black on shell. */
-	.patchline-mac-vibrancy,
-	.patchline-mac-vibrancy body,
-	.patchline-mac-vibrancy #root {
-		background-color: transparent !important;
-	}
-
-	.patchline-mac-vibrancy [data-sidebar="sidebar"] {
-		background-color: transparent !important;
-	}
-
-	.patchline-mac-vibrancy [data-patchline-chrome="inset"] {
-		background-color: transparent !important;
-	}
-
-	.patchline-mac-vibrancy [data-patchline-chrome="header"] {
-		background-color: transparent !important;
-		border-bottom-color: hsl(var(--border) / 0.35) !important;
-	}
-
-	.patchline-mac-vibrancy [data-patchline-chrome="modal"] {
-		background-color: hsl(var(--foreground) / 0.06) !important;
-	}
-
 	.dark {
 		/* Pitch black main + sidebar; neutral hue so nothing reads “blue-gray” */
 		--background: 0 0% 0%;
@@ -147,22 +123,4 @@
 		direction: rtl;
 		text-align: left;
 	}
-}
-
-html.patchline-mac-vibrancy
-	[data-sidebar="sidebar"]
-	.hover\:bg-sidebar-accent:hover {
-	background-color: hsl(var(--foreground) / 0.08) !important;
-}
-
-html.patchline-mac-vibrancy [data-sidebar="menu-button"][data-active="true"] {
-	background-color: hsl(var(--foreground) / 0.13) !important;
-}
-
-html.patchline-mac-vibrancy [data-patchline-chrome="header"] .bg-zinc-950 {
-	background-color: hsl(0 0% 100% / 0.07) !important;
-}
-
-html.patchline-mac-vibrancy [data-sidebar="content"] .bg-zinc-900\/45 {
-	background-color: hsl(0 0% 100% / 0.05) !important;
 }

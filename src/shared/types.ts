@@ -76,10 +76,6 @@ export type PatchlineRPCType = {
 				params: { title: string; description: string };
 				response: { ok: boolean };
 			};
-			getChromeFlags: {
-				params: void;
-				response: { macWindowVibrancy: boolean };
-			};
 		};
 		messages: Record<never, never>;
 	}>;
