@@ -14,7 +14,7 @@
 
 **Native window · Local-first · Git at the speed of Bun**
 
-[The problem](#the-problem) · [Scope](#scope) · [Supported](#supported-today) · [Incoming](#incoming--not-yet) · [Quick start](#quick-start) · [Screenshots](#screenshots) · [Development](#development) · [Build](#production-build) · [Layout](#repository-layout)
+[The problem](#the-problem) · [Screenshots](#screenshots) · [Scope](#scope) · [Supported](#supported-today) · [Incoming](#incoming--not-yet) · [Quick start](#quick-start) · [Development](#development) · [Build](#production-build) · [Layout](#repository-layout)
 
 </div>
 
@@ -29,6 +29,28 @@ Day-to-day coding often splits across **agents** (e.g. Claude Code) and **editor
 **Patchline** exists because **review deserves its own surface**: a **small, fast, native window** whose only job is to show **what changed** (patch by patch, line by line), let you **stage** and **commit** with confidence, and stay out of the way of your IDE.
 
 If you want a **quick, lightweight code diff** tool — not another full Git GUI — this is it.
+
+---
+
+## Screenshots
+
+Assets live in [`screenshots/`](./screenshots/).
+
+**Sidebar — multiple repos** (collapsible sections, **Staged** / **Changes** per repo)
+
+![Sidebar with multiple repositories](screenshots/splitviewwithsidebar.png)
+
+**Unified diff**
+
+![Unified diff](screenshots/unifiedview.png)
+
+**Split diff**
+
+![Split diff](screenshots/splitview.png)
+
+**Commit dialog**
+
+![Commit dialog](screenshots/commitdialog.png)
 
 ---
 
@@ -61,7 +83,7 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 | :--------------------- | :--------------------------------------------------------------------- |
 | **Git worktrees**      | Open and switch [worktrees](https://git-scm.com/docs/git-worktree) in the app (today: use a normal clone checkout; see **Scope**) |
 | **Merge conflicts**    | Resolve conflicts here — navigate markers, pick hunks or ours/theirs, finish merge/rebase without leaving Patchline |
-| **Broader Git**        | Push, pull, merge, rebase, branches UI, remote management, etc.        |
+| **Broader Git**        | **Push to remote**, **sync**-style flows (fetch / pull + push, publish), merge, rebase, branches UI, remote management — routine remote work without living in the terminal |
 | **File tree / editor** | Full repo browser and in-app editing were intentionally trimmed for v1 |
 
 _Roadmap is informal — PRs welcome for the gaps you care about._
@@ -138,28 +160,6 @@ cd /path/to/patchline   # or whatever project the agent is editing
 export PATCHLINE_SOURCE="$PWD"
 bun run patchline:hmr
 ```
-
----
-
-## Screenshots
-
-Assets live in [`screenshots/`](./screenshots/).
-
-**Sidebar — multiple repos** (collapsible sections, **Staged** / **Changes** per repo)
-
-![Sidebar with multiple repositories](screenshots/splitviewwithsidebar.png)
-
-**Unified diff**
-
-![Unified diff](screenshots/unifiedview.png)
-
-**Split diff**
-
-![Split diff](screenshots/splitview.png)
-
-**Commit dialog**
-
-![Commit dialog](screenshots/commitdialog.png)
 
 ---
 
