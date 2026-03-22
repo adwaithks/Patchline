@@ -13,11 +13,6 @@ export type DiffScope = "staged" | "unstaged";
 
 export type SelectedFileChange = FileChange & { diffScope: DiffScope };
 
-/** File tree entry — discriminated union for clearer UI + future metadata. */
-export type TreeNode =
-	| { type: "file"; name: string }
-	| { type: "dir"; name: string; children: TreeNode[] };
-
 export type FileDiff = {
 	filePath: string;
 	oldContent: string;
@@ -42,7 +37,6 @@ export type GeodesicRPCType = {
 				params: void;
 				response: {
 					sourcePath: string;
-					tree: TreeNode[];
 					changes: FileChange[];
 					branch: BranchInfo;
 				};

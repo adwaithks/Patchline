@@ -115,6 +115,7 @@ function FileList({
 
 export function SidebarChanges({ changes }: SidebarChangesProps) {
 	const { refresh } = useSidebarGit();
+	const { selectFile } = useWorkspace();
 	const [commitOpen, setCommitOpen] = useState(false);
 	const [commitTitle, setCommitTitle] = useState("");
 	const [commitDescription, setCommitDescription] = useState("");
@@ -154,6 +155,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 				setCommitOpen(false);
 				setCommitTitle("");
 				setCommitDescription("");
+				selectFile(null);
 				refresh();
 			}
 		} finally {
@@ -231,7 +233,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 							}
 						}}
 					>
-						<DialogContent className="electrobun-webkit-app-region-no-drag sm:max-w-md">
+						<DialogContent className="electrobun-webkit-app-region-no-drag sm:max-w-lg sm:rounded-xl">
 							<form onSubmit={handleCommitSubmit}>
 								<DialogHeader>
 									<DialogTitle>Commit</DialogTitle>

@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { getGeodesicRPC } from "@/lib/geodesic-rpc";
-import type { TreeNode, FileChange, BranchInfo } from "../../shared/types";
+import type { FileChange, BranchInfo } from "../../shared/types";
 
 const LOG = "[geodesic:webview]";
 
 export type ProjectData = {
 	sourcePath: string;
-	tree: TreeNode[];
 	changes: FileChange[];
 	branch: BranchInfo;
 };
@@ -22,7 +21,6 @@ export function useProjectData() {
 			if (!rpc) {
 				setData({
 					sourcePath: "(dev preview)",
-					tree: [],
 					changes: [],
 					branch: {
 						current: "—",

@@ -1,10 +1,9 @@
 import { BrowserWindow, BrowserView, Updater } from "electrobun/bun";
 import { resolve, join } from "path";
-import { readdirSync, readFileSync, type Dirent } from "fs";
+import { readFileSync } from "fs";
 import { simpleGit, type SimpleGit } from "simple-git";
 import type {
 	GeodesicRPCType,
-	TreeNode,
 	FileChange,
 	FileDiff,
 	DiffScope,
@@ -32,47 +31,6 @@ console.log(`${BLOG} process starting`, { sourcePath });
 
 /** One git instance for the open project (simple-git wraps the `git` CLI). */
 const repoGit: SimpleGit = simpleGit(sourcePath);
-
-// ---- Build file tree ----
-const IGNORE = new Set([
-	".git",
-	"node_modules",
-	".DS_Store",
-	"dist",
-	"build",
-	".next",
-	".nuxt",
-	".cache",
-	"coverage",
-	"__pycache__",
-]);
-
-function buildTree(dir: string): TreeNode[] {
-	let entries: Dirent[];
-	try {
-		entries = readdirSync(dir, { withFileTypes: true })
-			.filter((e) => !IGNORE.has(e.name))
-			.sort((a, b) => {
-				if (a.isDirectory() && !b.isDirectory()) return -1;
-				if (!a.isDirectory() && b.isDirectory()) return 1;
-				return a.name.localeCompare(b.name);
-			});
-	} catch {
-		return [];
-	}
-
-	return entries.map((entry) => {
-		const fullPath = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			return {
-				type: "dir",
-				name: entry.name,
-				children: buildTree(fullPath),
-			} satisfies TreeNode;
-		}
-		return { type: "file", name: entry.name } satisfies TreeNode;
-	});
-}
 
 type PorcelainChar = FileChange["indexState"];
 
@@ -278,17 +236,15 @@ const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 		requests: {
 			getProjectData: async () => {
 				console.log(`${BLOG} RPC getProjectData`);
-				const [tree, changes, branch] = await Promise.all([
-					Promise.resolve(buildTree(sourcePath)),
+				const [changes, branch] = await Promise.all([
 					getGitChanges(repoGit),
 					getBranchInfo(repoGit),
 				]);
 				console.log(`${BLOG} RPC getProjectData →`, {
-					treeRoots: tree.length,
 					changes: changes.length,
 					branch: branch.current,
 				});
-				return { sourcePath, tree, changes, branch };
+				return { sourcePath, changes, branch };
 			},
 			getFileDiff: async ({ filePath, diffScope }) => {
 				console.log(`${BLOG} RPC getFileDiff`, { filePath, diffScope });

@@ -1,7 +1,6 @@
 import type {
 	FileDiff,
 	FileChange,
-	TreeNode,
 	DiffScope,
 	BranchInfo,
 } from "../../shared/types";
@@ -11,7 +10,6 @@ export type GeodesicRpcClient = {
 	request: {
 		getProjectData: () => Promise<{
 			sourcePath: string;
-			tree: TreeNode[];
 			changes: FileChange[];
 			branch: BranchInfo;
 		}>;
