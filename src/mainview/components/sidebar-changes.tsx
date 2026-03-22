@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from "react";
 import { Minus, Plus } from "lucide-react";
 import {
 	SidebarGroup,
@@ -8,6 +9,18 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useSidebarGit } from "@/context/sidebar-git-context";
 import { useWorkspace } from "@/context/workspace-context";
 import { FileIcon } from "@/lib/file-icon";
@@ -102,6 +115,10 @@ function FileList({
 
 export function SidebarChanges({ changes }: SidebarChangesProps) {
 	const { refresh } = useSidebarGit();
+	const [commitOpen, setCommitOpen] = useState(false);
+	const [commitTitle, setCommitTitle] = useState("");
+	const [commitDescription, setCommitDescription] = useState("");
+	const [committing, setCommitting] = useState(false);
 
 	async function stage(f: FileChange) {
 		await getGeodesicRPC()?.request.stageFile({ filePath: f.path });
@@ -121,6 +138,27 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 	async function unstageAll() {
 		await getGeodesicRPC()?.request.unstageAll();
 		refresh();
+	}
+
+	async function handleCommitSubmit(e: FormEvent) {
+		e.preventDefault();
+		const title = commitTitle.trim();
+		if (!title) return;
+		setCommitting(true);
+		try {
+			const res = await getGeodesicRPC()?.request.commit({
+				title,
+				description: commitDescription,
+			});
+			if (res?.ok) {
+				setCommitOpen(false);
+				setCommitTitle("");
+				setCommitDescription("");
+				refresh();
+			}
+		} finally {
+			setCommitting(false);
+		}
 	}
 
 	// Staged: index column is non-space, non-?
@@ -146,31 +184,107 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 	return (
 		<>
 			{staged.length > 0 && (
-				<SidebarGroup>
-					<SidebarGroupLabel className="flex flex-row items-center justify-between gap-2 pr-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
-						<span>Staged</span>
-						<button
-							type="button"
-							title="Unstage all"
-							className="electrobun-webkit-app-region-no-drag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-							onClick={(e) => {
-								e.preventDefault();
-								void unstageAll();
-							}}
-						>
-							<Minus className="size-3.5" />
-						</button>
-					</SidebarGroupLabel>
-					<SidebarGroupContent>
-						<FileList
-							items={staged}
-							diffScope="staged"
-							actionIcon={<Minus className="size-3" />}
-							actionTitle="Unstage"
-							onAction={unstage}
-						/>
-					</SidebarGroupContent>
-				</SidebarGroup>
+				<>
+					<SidebarGroup>
+						<SidebarGroupLabel className="flex flex-row items-center justify-between gap-2 pr-2 text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3 py-1">
+							<span className="min-w-0 truncate">Staged</span>
+							<div className="flex shrink-0 items-center gap-0.5">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									className="electrobun-webkit-app-region-no-drag h-7 px-2 text-[10px] uppercase tracking-wider text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+									onClick={() => setCommitOpen(true)}
+								>
+									Commit
+								</Button>
+								<button
+									type="button"
+									title="Unstage all"
+									className="electrobun-webkit-app-region-no-drag flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+									onClick={(e) => {
+										e.preventDefault();
+										void unstageAll();
+									}}
+								>
+									<Minus className="size-3.5" />
+								</button>
+							</div>
+						</SidebarGroupLabel>
+						<SidebarGroupContent>
+							<FileList
+								items={staged}
+								diffScope="staged"
+								actionIcon={<Minus className="size-3" />}
+								actionTitle="Unstage"
+								onAction={unstage}
+							/>
+						</SidebarGroupContent>
+					</SidebarGroup>
+					<Dialog
+						open={commitOpen}
+						onOpenChange={(open) => {
+							setCommitOpen(open);
+							if (!open) {
+								setCommitTitle("");
+								setCommitDescription("");
+							}
+						}}
+					>
+						<DialogContent className="electrobun-webkit-app-region-no-drag sm:max-w-md">
+							<form onSubmit={handleCommitSubmit}>
+								<DialogHeader>
+									<DialogTitle>Commit</DialogTitle>
+									<DialogDescription>
+										Enter a title and optional description for this commit.
+									</DialogDescription>
+								</DialogHeader>
+								<div className="grid gap-4 py-4">
+									<div className="grid gap-2">
+										<Label htmlFor="commit-title">Title</Label>
+										<Input
+											id="commit-title"
+											value={commitTitle}
+											onChange={(ev) => setCommitTitle(ev.target.value)}
+											placeholder="Short summary"
+											autoFocus
+											disabled={committing}
+										/>
+									</div>
+									<div className="grid gap-2">
+										<Label htmlFor="commit-description">Description</Label>
+										<Textarea
+											id="commit-description"
+											value={commitDescription}
+											onChange={(ev) =>
+												setCommitDescription(ev.target.value)
+											}
+											placeholder="Optional body"
+											disabled={committing}
+											rows={4}
+										/>
+									</div>
+								</div>
+								<DialogFooter>
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => setCommitOpen(false)}
+										disabled={committing}
+									>
+										Cancel
+									</Button>
+									<Button
+										type="submit"
+										disabled={!commitTitle.trim() || committing}
+									>
+										{committing ? "Committing…" : "Commit"}
+									</Button>
+								</DialogFooter>
+							</form>
+						</DialogContent>
+					</Dialog>
+				</>
 			)}
 			{unstaged.length > 0 && (
 				<SidebarGroup>

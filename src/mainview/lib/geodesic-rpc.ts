@@ -21,6 +21,10 @@ export type GeodesicRpcClient = {
 		unstageFile: (params: { filePath: string }) => Promise<{ ok: boolean }>;
 		stageAll: () => Promise<{ ok: boolean }>;
 		unstageAll: () => Promise<{ ok: boolean }>;
+		commit: (params: {
+			title: string;
+			description: string;
+		}) => Promise<{ ok: boolean }>;
 	};
 };
 

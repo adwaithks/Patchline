@@ -37,14 +37,28 @@ export function useProjectData() {
 		load();
 	}, [load]);
 
-	// Poll git snapshot ~1s — only consumed under SidebarGitProvider so main panel doesn’t re-render.
+	// Poll git snapshot (~1s + random 0–999ms jitter) — reduces lock alignment with other git calls.
 	useEffect(() => {
 		const rpc = getGeodesicRPC();
 		if (!rpc) return;
-		const id = setInterval(() => {
-			load();
-		}, 1000);
-		return () => clearInterval(id);
+		let cancelled = false;
+		let timeoutId: ReturnType<typeof setTimeout>;
+
+		const scheduleNext = () => {
+			const ms = 1000 + Math.floor(Math.random() * 1000);
+			timeoutId = setTimeout(() => {
+				if (cancelled) return;
+				void load().finally(() => {
+					if (!cancelled) scheduleNext();
+				});
+			}, ms);
+		};
+
+		scheduleNext();
+		return () => {
+			cancelled = true;
+			clearTimeout(timeoutId);
+		};
 	}, [load]);
 
 	return { data, loading, error, refresh: load };

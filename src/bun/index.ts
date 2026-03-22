@@ -137,6 +137,23 @@ async function unstageAll(git: SimpleGit): Promise<{ ok: boolean }> {
 	}
 }
 
+async function commitStaged(
+	git: SimpleGit,
+	title: string,
+	description: string,
+): Promise<{ ok: boolean }> {
+	const subject = title.trim();
+	if (!subject) return { ok: false };
+	const body = description.trim();
+	const message = body ? `${subject}\n\n${body}` : subject;
+	try {
+		await git.commit(message);
+		return { ok: true };
+	} catch {
+		return { ok: false };
+	}
+}
+
 // git diff --no-index always exits 1 when files differ, causing simple-git to throw.
 // The diff output ends up on the error object rather than the return value.
 async function diffNoIndex(filePath: string): Promise<string> {
@@ -270,6 +287,10 @@ const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 			unstageAll: async () => {
 				console.log(`${BLOG} RPC unstageAll`);
 				return unstageAll(repoGit);
+			},
+			commit: async ({ title, description }) => {
+				console.log(`${BLOG} RPC commit`, { titleLen: title.length });
+				return commitStaged(repoGit, title, description);
 			},
 		},
 		messages: {},

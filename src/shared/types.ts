@@ -56,6 +56,10 @@ export type GeodesicRPCType = {
 				params: void;
 				response: { ok: boolean };
 			};
+			commit: {
+				params: { title: string; description: string };
+				response: { ok: boolean };
+			};
 		};
 		messages: Record<never, never>;
 	}>;
