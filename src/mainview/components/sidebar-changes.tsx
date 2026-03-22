@@ -33,6 +33,28 @@ function isDeletedChange(c: FileChange): boolean {
 	return c.indexState === "D" || c.worktreeState === "D";
 }
 
+type PorcelainChar = FileChange["indexState"];
+
+const PORCELAIN_TONE: Record<PorcelainChar, string> = {
+	" ": "text-zinc-600",
+	M: "text-amber-300/85",
+	A: "text-emerald-300/85",
+	D: "text-rose-300/80",
+	R: "text-sky-300/85",
+	C: "text-violet-300/80",
+	U: "text-orange-300/85",
+	"?": "text-zinc-400/90",
+};
+
+function PorcelainGlyph({ state }: { state: PorcelainChar }) {
+	const ch = state === " " ? "·" : state;
+	return (
+		<span className={cn("font-mono tabular-nums", PORCELAIN_TONE[state])}>
+			{ch}
+		</span>
+	);
+}
+
 interface SidebarChangesProps {
 	repoRoot: string;
 	changes: FileChange[];
@@ -100,9 +122,24 @@ function FileList({
 								{name}
 							</span>
 						</SidebarMenuButton>
+						<span
+							className={cn(
+								"pointer-events-none absolute right-1 top-1 z-[1] flex h-5 w-5 items-center justify-center gap-px text-[9px] leading-none transition-opacity",
+								"opacity-100 group-hover/menu-item:opacity-0",
+							)}
+							title={`Index ${item.indexState === " " ? "clean" : item.indexState}, worktree ${item.worktreeState === " " ? "clean" : item.worktreeState}`}
+							aria-hidden
+						>
+							<PorcelainGlyph state={item.indexState} />
+							<PorcelainGlyph state={item.worktreeState} />
+						</span>
 						<SidebarMenuAction
 							title={actionTitle}
-							className="right-1 opacity-0 group-hover/menu-item:opacity-100 transition-opacity"
+							className={cn(
+								"top-1 z-[2] opacity-0 transition-opacity",
+								"pointer-events-none group-hover/menu-item:pointer-events-auto",
+								"group-hover/menu-item:opacity-100",
+							)}
 							onClick={(e) => {
 								e.stopPropagation();
 								onAction(item);
