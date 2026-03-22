@@ -8,6 +8,7 @@ import type {
 	FileChange,
 	FileDiff,
 	DiffScope,
+	BranchInfo,
 } from "../shared/types";
 
 const DEV_SERVER_PORT = 5173;
@@ -92,6 +93,25 @@ async function getGitChanges(git: SimpleGit): Promise<FileChange[]> {
 		}));
 	} catch {
 		return [];
+	}
+}
+
+async function getBranchInfo(git: SimpleGit): Promise<BranchInfo> {
+	try {
+		const abbrev = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+		const detached = abbrev === "HEAD";
+		const current = detached
+			? (await git.revparse(["--short", "HEAD"])).trim()
+			: abbrev;
+		let upstream: string | null = null;
+		try {
+			upstream = (await git.revparse(["--abbrev-ref", "@{u}"])).trim();
+		} catch {
+			upstream = null;
+		}
+		return { current, upstream, detached };
+	} catch {
+		return { current: "unknown", upstream: null, detached: false };
 	}
 }
 
@@ -258,15 +278,17 @@ const rpc = BrowserView.defineRPC<GeodesicRPCType>({
 		requests: {
 			getProjectData: async () => {
 				console.log(`${BLOG} RPC getProjectData`);
-				const [tree, changes] = await Promise.all([
+				const [tree, changes, branch] = await Promise.all([
 					Promise.resolve(buildTree(sourcePath)),
 					getGitChanges(repoGit),
+					getBranchInfo(repoGit),
 				]);
 				console.log(`${BLOG} RPC getProjectData →`, {
 					treeRoots: tree.length,
 					changes: changes.length,
+					branch: branch.current,
 				});
-				return { sourcePath, tree, changes };
+				return { sourcePath, tree, changes, branch };
 			},
 			getFileDiff: async ({ filePath, diffScope }) => {
 				console.log(`${BLOG} RPC getFileDiff`, { filePath, diffScope });

@@ -25,6 +25,16 @@ export type FileDiff = {
 	hunks: string;
 };
 
+/** Current HEAD branch identity + optional upstream (answers “on” / “from”). */
+export type BranchInfo = {
+	/** Branch name, or short SHA when `detached`. */
+	current: string;
+	/** Remote-tracking branch (e.g. `origin/main`) when an upstream is set. */
+	upstream: string | null;
+	/** `true` when not on a named local branch. */
+	detached: boolean;
+};
+
 export type GeodesicRPCType = {
 	bun: RPCSchema<{
 		requests: {
@@ -34,6 +44,7 @@ export type GeodesicRPCType = {
 					sourcePath: string;
 					tree: TreeNode[];
 					changes: FileChange[];
+					branch: BranchInfo;
 				};
 			};
 			getFileDiff: {

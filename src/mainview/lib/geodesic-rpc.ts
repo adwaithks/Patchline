@@ -3,6 +3,7 @@ import type {
 	FileChange,
 	TreeNode,
 	DiffScope,
+	BranchInfo,
 } from "../../shared/types";
 
 /** Webview client that calls Bun-side RPC request handlers */
@@ -12,6 +13,7 @@ export type GeodesicRpcClient = {
 			sourcePath: string;
 			tree: TreeNode[];
 			changes: FileChange[];
+			branch: BranchInfo;
 		}>;
 		getFileDiff: (params: {
 			filePath: string;
