@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SidebarGitProvider, useSidebarGit } from "@/context/sidebar-git-context";
+import {
+	SidebarGitProvider,
+	useSidebarGit,
+} from "@/context/sidebar-git-context";
 import { useWorkspace, WorkspaceProvider } from "@/context/workspace-context";
 import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { DiffLayoutMode } from "@/types/diff-layout";
@@ -76,7 +79,7 @@ function AppContent() {
 				<span className="text-xs text-muted-foreground truncate select-none min-w-0 flex-1 direction-rtl">
 					{headerSubtitle}
 				</span>
-				{(rpc || selectedFile) ? (
+				{rpc || selectedFile ? (
 					<div className="ml-auto flex shrink-0 items-center gap-1.5 electrobun-webkit-app-region-no-drag">
 						{rpc ? (
 							<Button
@@ -89,7 +92,10 @@ function AppContent() {
 								disabled={loading}
 								onClick={() => void handleAddRepository()}
 							>
-								<FolderPlus className="size-4" strokeWidth={1.75} />
+								<FolderPlus
+									className="size-4"
+									strokeWidth={1.75}
+								/>
 							</Button>
 						) : null}
 						{selectedFile ? (
@@ -131,6 +137,8 @@ function AppContent() {
 		</SidebarInset>
 	);
 }
+
+console.log("AppContent");
 
 /** Subscribes to git poll; lives under `SidebarGitProvider` only so `AppContent` is not a descendant. */
 function SidebarGitColumn() {

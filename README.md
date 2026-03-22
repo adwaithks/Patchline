@@ -36,7 +36,7 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 
 |                      |                                                                                                            |
 | :------------------- | :--------------------------------------------------------------------------------------------------------- |
-| **One project**      | One Git repo per session — set `PATCHLINE_SOURCE` / `--source`, **or** pick a folder in the app at launch. |
+| **Multiple repos**   | Track **several Git repositories** in one window — seed with `PATCHLINE_SOURCE` / `--source`, **Open project** / **Choose folders…** (multi-select where the OS allows), or **Add repository** (folder icon in the header) anytime. |
 | **No worktrees yet** | [Git worktrees](https://git-scm.com/docs/git-worktree) are **not** supported; use a normal clone checkout. |
 
 ---
@@ -45,12 +45,12 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 
 | Area           | What works                                                                                                                |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Repository** | `PATCHLINE_SOURCE` / `--source`, **or** **Open project** + **Choose folder** (no env)                                     |
-| **Changes**    | Staged vs unstaged lists from `git status --porcelain`                                                                    |
-| **Diffs**      | Per-file diff with **unified** or **split** layout ([`@git-diff-view`](https://github.com/MrWangJustToSay/git-diff-view)) |
-| **Staging**    | Stage / unstage one file; **stage all** / **unstage all**                                                                 |
-| **Commit**     | **Title + description** (subject + body), then refresh                                                                    |
-| **Branch**     | Current branch and **upstream** (`@{u}`)                                                                                  |
+| **Repositories** | **Multi-repo:** each root has its own **Staged** / **Changes**, **branch** in the sidebar, and **collapsible** section. `PATCHLINE_SOURCE` / `--source` seeds the first repo; **Choose folders…** can add **multiple** valid `.git` directories in one sheet; **Add repository** appends more without restart. |
+| **Changes**    | Per-repo lists from `git status --porcelain` — **staged** vs **unstaged** buckets                                                                    |
+| **Diffs**      | Per-file diff (scoped to the correct repo) with **unified** or **split** layout ([`@git-diff-view`](https://github.com/MrWangJustToSay/git-diff-view)); title bar shows `repoFolder/path/in/repo` |
+| **Staging**    | Stage / unstage one file; **stage all** / **unstage all** **per repository**                                                                 |
+| **Commit**     | **Title + description** (subject + body) **per repo**, then refresh                                                                    |
+| **Branch**     | Current branch (and **upstream** `@{u}`) **per repo** in each sidebar header                                                                                  |
 | **Platform**   | macOS-oriented Electrobun app; dev + canary build pipeline                                                                |
 
 ---
@@ -60,7 +60,6 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 |                        |                                                                        |
 | :--------------------- | :--------------------------------------------------------------------- |
 | **Git worktrees**      | Opening or switching worktrees inside the app                          |
-| **Multiple projects**  | In-app multi-root / several open projects without restart              |
 | **Broader Git**        | Push, pull, merge, rebase, branches UI, remote management, etc.        |
 | **File tree / editor** | Full repo browser and in-app editing were intentionally trimmed for v1 |
 
@@ -90,7 +89,7 @@ bun install
 
 ### Opening a repository
 
-**Verified behavior (dev and production builds):** if `PATCHLINE_SOURCE` is set when the process starts, that repo opens immediately. If not, you get **Open project** and a native **Choose folder…** sheet (must be a directory containing `.git`).
+**Verified behavior (dev and production builds):** if `PATCHLINE_SOURCE` is set when the process starts, that repo is added immediately. If you have **no** repos yet, you get **Add a repository** and a native **Choose folders…** sheet (each selection must be a directory containing `.git`; you can pick **multiple** folders in one go where the OS dialog allows). After the first repo(s), use the **folder-plus** control in the **top bar** to add more anytime.
 
 **Option A — environment variable**  
 Best for scripts, agents, and “always this repo”. To dogfood on **this** repository:
@@ -129,17 +128,17 @@ bun run patchline:hmr
 
 Assets live in [`screenshots/`](./screenshots/).
 
-**Open project** (no `PATCHLINE_SOURCE` — **Choose folder** flow)
+**Sidebar — multiple repos** (collapsible sections, **Staged** / **Changes** per repo)
 
-![Open project](screenshots/openproject.png)
+![Sidebar with multiple repositories](screenshots/splitviewwithsidebar.png)
 
 **Unified diff**
 
-![Unified diff](screenshots/unifieddiff.png)
+![Unified diff](screenshots/unifiedview.png)
 
 **Split diff**
 
-![Split diff](screenshots/splitdiff.png)
+![Split diff](screenshots/splitview.png)
 
 **Commit dialog**
 
@@ -169,7 +168,7 @@ Runs **Vite production** (`dist/`) then **Electrobun** (`--env=canary`). The `.a
 | **.app bundle** | `build/canary-macos-arm64/Patchline-canary.app` (folder name may include `linux` / `win` on other platforms) |
 | **Installer**   | `artifacts/canary-macos-arm64-Patchline-canary.dmg` (+ `.tar.zst` update payload)                            |
 
-**Run the built app** — same rules as dev: optional env → repo opens immediately; no env → **Open project** / **Choose folder**.
+**Run the built app** — same rules as dev: optional env seeds a **first** repo; with **no** repos yet you get **Choose folders…**; add more anytime via the header **Add repository** (folder-plus) control.
 
 - **Double-click** the app or `open Patchline-canary.app` → folder picker (no `PATCHLINE_SOURCE`).
 - **Open this repo in Patchline** after a local build (path to `.app` may differ by arch / name):
