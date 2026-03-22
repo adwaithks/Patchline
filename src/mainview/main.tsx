@@ -14,7 +14,9 @@ async function init() {
 	if ((window as any).__electrobunWebviewId) {
 		try {
 			const { Electroview } = await import("electrobun/view");
+			// Default RPC timeout is 1s — too short while the native folder picker is open.
 			const rpc = Electroview.defineRPC<import("../shared/types").PatchlineRPCType>({
+				maxRequestTime: Infinity,
 				handlers: { requests: {}, messages: {} },
 			});
 			new Electroview({ rpc });

@@ -37,12 +37,9 @@ interface SidebarChangesProps {
 	changes: FileChange[];
 }
 
-function splitPath(fullPath: string): { name: string; dir: string } {
+function fileBaseName(fullPath: string): string {
 	const parts = fullPath.split("/");
-	return {
-		name: parts[parts.length - 1],
-		dir: parts.length > 1 ? parts.slice(0, -1).join("/") : "",
-	};
+	return parts[parts.length - 1] ?? fullPath;
 }
 
 function FileList({
@@ -62,13 +59,14 @@ function FileList({
 	return (
 		<SidebarMenu>
 			{items.map((item) => {
-				const { name, dir } = splitPath(item.path);
+				const name = fileBaseName(item.path);
 				const deleted = isDeletedChange(item);
 				const strike = deleted ? "line-through" : "";
 				return (
 					<SidebarMenuItem key={`${item.path}-${diffScope}`}>
 						<SidebarMenuButton
 							className="pr-8 items-center"
+							title={item.path}
 							isActive={
 								selectedFile?.path === item.path &&
 								selectedFile?.diffScope === diffScope
@@ -85,16 +83,6 @@ function FileList({
 							>
 								{name}
 							</span>
-							{dir && (
-								<span
-									className={cn(
-										"truncate text-[11px] text-muted-foreground/50 ml-1.5",
-										strike,
-									)}
-								>
-									{dir}
-								</span>
-							)}
 						</SidebarMenuButton>
 						<SidebarMenuAction
 							title={actionTitle}

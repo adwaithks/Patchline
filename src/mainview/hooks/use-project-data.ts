@@ -5,7 +5,7 @@ import type { FileChange, BranchInfo } from "../../shared/types";
 const LOG = "[patchline:webview]";
 
 export type ProjectData = {
-	sourcePath: string;
+	sourcePath: string | null;
 	changes: FileChange[];
 	branch: BranchInfo;
 };

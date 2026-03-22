@@ -36,9 +36,20 @@ export type PatchlineRPCType = {
 			getProjectData: {
 				params: void;
 				response: {
-					sourcePath: string;
+					/** `null` until the user opens a folder (or `PATCHLINE_SOURCE` is set at launch). */
+					sourcePath: string | null;
 					changes: FileChange[];
 					branch: BranchInfo;
+				};
+			};
+			openProjectFolder: {
+				params: void;
+				response: {
+					ok: boolean;
+					/** Absolute path when `ok`; otherwise `null`. */
+					path: string | null;
+					/** Set when the user picked a folder that is not a Git repo, etc. */
+					error: string | null;
 				};
 			};
 			getFileDiff: {

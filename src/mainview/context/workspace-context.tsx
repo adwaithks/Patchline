@@ -10,7 +10,7 @@ import type { SelectedFileChange } from "../../shared/types";
 type WorkspaceContextValue = {
 	/** Absolute project root — updated when git data first reports it (not on every poll churn). */
 	sourcePath: string | null;
-	setSourcePath: (path: string) => void;
+	setSourcePath: (path: string | null) => void;
 	selectedFile: SelectedFileChange | null;
 	selectFile: (file: SelectedFileChange | null) => void;
 };
@@ -30,7 +30,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 		null,
 	);
 
-	const setSourcePath = useCallback((path: string) => {
+	const setSourcePath = useCallback((path: string | null) => {
 		setSourcePathState(path);
 	}, []);
 

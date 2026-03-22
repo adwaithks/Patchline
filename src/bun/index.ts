@@ -3,6 +3,7 @@ import {
 	BrowserWindow,
 	BrowserView,
 	Updater,
+	Utils,
 } from "electrobun/bun";
 import { resolve, join } from "path";
 import { readFileSync } from "fs";
@@ -18,25 +19,27 @@ import type {
 const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
 
-// Resolve source path
-// Usage: PATCHLINE_SOURCE=/my/project bun run start (GEODESIC_SOURCE still accepted)
-function getSourcePath(): string {
-	const fromEnv =
-		process.env.PATCHLINE_SOURCE ?? process.env.GEODESIC_SOURCE;
-	if (!fromEnv)
-		throw new Error(
-			"PATCHLINE_SOURCE is not set. Usage: PATCHLINE_SOURCE=/my/project bun run start (legacy: GEODESIC_SOURCE)",
-		);
+function getInitialWorkspaceRoot(): string | null {
+	const fromEnv = process.env.PATCHLINE_SOURCE?.trim();
+	if (!fromEnv) return null;
 	return resolve(fromEnv);
 }
 
-const sourcePath = getSourcePath();
+let workspaceRoot: string | null = getInitialWorkspaceRoot();
+let repoGit: SimpleGit | null = workspaceRoot ? simpleGit(workspaceRoot) : null;
 
 const BLOG = "[patchline:bun]";
-console.log(`${BLOG} process starting`, { sourcePath });
+console.log(`${BLOG} process starting`, {
+	workspaceRoot,
+	hasGit: Boolean(repoGit),
+});
 
-/** One git instance for the open project (simple-git wraps the `git` CLI). */
-const repoGit: SimpleGit = simpleGit(sourcePath);
+function requireGit(): SimpleGit {
+	if (!repoGit) {
+		throw new Error("No Git repository is open");
+	}
+	return repoGit;
+}
 
 type PorcelainChar = FileChange["indexState"];
 
@@ -142,7 +145,7 @@ async function commitStaged(
 // The diff output ends up on the error object rather than the return value.
 async function diffNoIndex(filePath: string): Promise<string> {
 	try {
-		await repoGit.raw(["diff", "--no-index", "/dev/null", filePath]);
+		await requireGit().raw(["diff", "--no-index", "/dev/null", filePath]);
 		return "";
 	} catch (e: unknown) {
 		return (e as any)?.git?.stdout ?? "";
@@ -151,7 +154,10 @@ async function diffNoIndex(filePath: string): Promise<string> {
 
 async function showHead(filePath: string): Promise<string> {
 	try {
-		return (await repoGit.show([`HEAD:${filePath}`])).replace(/\r\n/g, "\n");
+		return (await requireGit().show([`HEAD:${filePath}`])).replace(
+			/\r\n/g,
+			"\n",
+		);
 	} catch {
 		return "";
 	}
@@ -160,7 +166,10 @@ async function showHead(filePath: string): Promise<string> {
 /** Staged snapshot (index / next commit), when present */
 async function showIndex(filePath: string): Promise<string> {
 	try {
-		return (await repoGit.raw(["show", `:${filePath}`])).replace(/\r\n/g, "\n");
+		return (await requireGit().raw(["show", `:${filePath}`])).replace(
+			/\r\n/g,
+			"\n",
+		);
 	} catch {
 		return "";
 	}
@@ -170,7 +179,11 @@ async function getFileDiff(
 	filePath: string,
 	diffScope: DiffScope,
 ): Promise<FileDiff> {
-	const absPath = join(sourcePath, filePath);
+	if (!workspaceRoot || !repoGit) {
+		return { filePath, oldContent: "", newContent: "", hunks: "" };
+	}
+
+	const absPath = join(workspaceRoot, filePath);
 
 	const worktree = (() => {
 		try {
@@ -180,7 +193,7 @@ async function getFileDiff(
 		}
 	})();
 
-	const { files } = await repoGit.status(["--", filePath]);
+	const { files } = await requireGit().status(["--", filePath]);
 	const { index = " ", working_dir = " " } = files[0] ?? {};
 
 	const isUntracked = index === "?" && working_dir === "?";
@@ -200,7 +213,7 @@ async function getFileDiff(
 		newContent = worktree;
 	} else if (diffScope === "staged" && hasStaged) {
 		try {
-			rawDiff = await repoGit.raw([
+			rawDiff = await requireGit().raw([
 				"diff",
 				"--cached",
 				"HEAD",
@@ -215,7 +228,7 @@ async function getFileDiff(
 	} else if (diffScope === "unstaged" && hasUnstaged) {
 		// Worktree vs index (what you’re still editing on top of staging)
 		try {
-			rawDiff = await repoGit.raw(["diff", "--", filePath]);
+			rawDiff = await requireGit().raw(["diff", "--", filePath]);
 		} catch {
 			rawDiff = "";
 		}
@@ -235,6 +248,12 @@ async function getFileDiff(
 	};
 }
 
+const emptyBranch: BranchInfo = {
+	current: "—",
+	upstream: null,
+	detached: false,
+};
+
 // ---- RPC ----
 const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 	maxRequestTime: 10000,
@@ -242,6 +261,13 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 		requests: {
 			getProjectData: async () => {
 				console.log(`${BLOG} RPC getProjectData`);
+				if (!workspaceRoot || !repoGit) {
+					return {
+						sourcePath: null,
+						changes: [],
+						branch: emptyBranch,
+					};
+				}
 				const [changes, branch] = await Promise.all([
 					getGitChanges(repoGit),
 					getBranchInfo(repoGit),
@@ -250,7 +276,32 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 					changes: changes.length,
 					branch: branch.current,
 				});
-				return { sourcePath, changes, branch };
+				return { sourcePath: workspaceRoot, changes, branch };
+			},
+			openProjectFolder: async () => {
+				const picked = await Utils.openFileDialog({
+					canChooseFiles: false,
+					canChooseDirectory: true,
+					allowsMultipleSelection: false,
+				});
+				const raw = picked.map((s) => s.trim()).find(Boolean);
+				if (!raw) {
+					return { ok: false, path: null, error: null };
+				}
+				const path = resolve(raw);
+				const isRepo = await simpleGit(path).checkIsRepo();
+				if (!isRepo) {
+					return {
+						ok: false,
+						path: null,
+						error: "That folder is not a Git repository (no .git).",
+					};
+				}
+				workspaceRoot = path;
+				repoGit = simpleGit(path);
+				mainWindow.setTitle(`Patchline — ${path}`);
+				console.log(`${BLOG} opened project`, { path });
+				return { ok: true, path, error: null };
 			},
 			getFileDiff: async ({ filePath, diffScope }) => {
 				console.log(`${BLOG} RPC getFileDiff`, { filePath, diffScope });
@@ -258,22 +309,27 @@ const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 			},
 			stageFile: async ({ filePath }) => {
 				console.log(`${BLOG} RPC stageFile`, { filePath });
+				if (!repoGit) return { ok: false };
 				return stagePath(repoGit, filePath);
 			},
 			unstageFile: async ({ filePath }) => {
 				console.log(`${BLOG} RPC unstageFile`, { filePath });
+				if (!repoGit) return { ok: false };
 				return unstagePath(repoGit, filePath);
 			},
 			stageAll: async () => {
 				console.log(`${BLOG} RPC stageAll`);
+				if (!repoGit) return { ok: false };
 				return stageAll(repoGit);
 			},
 			unstageAll: async () => {
 				console.log(`${BLOG} RPC unstageAll`);
+				if (!repoGit) return { ok: false };
 				return unstageAll(repoGit);
 			},
 			commit: async ({ title, description }) => {
 				console.log(`${BLOG} RPC commit`, { titleLen: title.length });
+				if (!repoGit) return { ok: false };
 				return commitStaged(repoGit, title, description);
 			},
 		},
@@ -294,7 +350,7 @@ async function getMainViewUrl(): Promise<string> {
 	return "views://mainview/index.html";
 }
 
-/** macOS menu bar: app name → Quit, plus Edit/Window for native roles (clipboard, minimize, etc.). */
+/** macOS menu bar: app name → Quit*/
 function setupApplicationMenu() {
 	ApplicationMenu.setApplicationMenu([
 		{
@@ -307,26 +363,6 @@ function setupApplicationMenu() {
 				{ role: "quit", accelerator: "Command+Q" },
 			],
 		},
-		{
-			label: "Edit",
-			submenu: [
-				{ role: "undo" },
-				{ role: "redo" },
-				{ type: "divider" },
-				{ role: "cut" },
-				{ role: "copy" },
-				{ role: "paste" },
-				{ role: "delete" },
-				{ role: "selectAll" },
-			],
-		},
-		{
-			label: "Window",
-			submenu: [
-				{ role: "minimize" },
-				{ role: "zoom" },
-			],
-		},
 	]);
 }
 
@@ -334,8 +370,8 @@ const url = await getMainViewUrl();
 
 setupApplicationMenu();
 
-new BrowserWindow({
-	title: `Patchline — ${sourcePath}`,
+const mainWindow = new BrowserWindow({
+	title: workspaceRoot ? `Patchline — ${workspaceRoot}` : "Patchline",
 	url,
 	titleBarStyle: "hiddenInset",
 	frame: {
@@ -347,4 +383,8 @@ new BrowserWindow({
 	rpc,
 });
 
-console.log(`Patchline started — watching: ${sourcePath}`);
+if (workspaceRoot) {
+	console.log(`Patchline started — watching: ${workspaceRoot}`);
+} else {
+	console.log("Patchline started — choose a repository from the app window");
+}

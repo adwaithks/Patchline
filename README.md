@@ -2,7 +2,7 @@
 
 # Patchline
 
-### *Patches, line diffs, and commits — a lightweight window built for reading source changes.*
+### _Patches, line diffs, and commits — a lightweight window built for reading source changes._
 
 [![Bun](https://img.shields.io/badge/Bun-14151A?style=for-the-badge&logo=bun&logoColor=fff)](https://bun.sh)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
@@ -14,7 +14,7 @@
 
 **Native window · Local-first · Git at the speed of Bun**
 
-[The problem](#the-problem) · [Scope](#scope) · [Supported](#supported-today) · [Incoming](#incoming--not-yet) · [Quick start](#quick-start) · [Development](#development) · [Build](#production-build) · [Layout](#repository-layout)
+[The problem](#the-problem) · [Scope](#scope) · [Supported](#supported-today) · [Incoming](#incoming--not-yet) · [Quick start](#quick-start) · [Screenshots](#screenshots) · [Development](#development) · [Build](#production-build) · [Layout](#repository-layout)
 
 </div>
 
@@ -34,53 +34,53 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 
 ## Scope
 
-| | |
-| :--- | :--- |
-| **One project** | One repository path per launch (`PATCHLINE_SOURCE` — `GEODESIC_SOURCE` still works for older scripts). |
+|                      |                                                                                                            |
+| :------------------- | :--------------------------------------------------------------------------------------------------------- |
+| **One project**      | One Git repo per session — set `PATCHLINE_SOURCE` / `--source`, **or** pick a folder in the app at launch. |
 | **No worktrees yet** | [Git worktrees](https://git-scm.com/docs/git-worktree) are **not** supported; use a normal clone checkout. |
 
 ---
 
 ## Supported today
 
-| Area | What works |
-|--------|------------|
-| **Repository** | Single open repo via `PATCHLINE_SOURCE` (or legacy `GEODESIC_SOURCE`) |
-| **Changes** | Staged vs unstaged lists from `git status --porcelain` |
-| **Diffs** | Per-file diff with **unified** or **split** layout ([`@git-diff-view`](https://github.com/MrWangJustToSay/git-diff-view)) |
-| **Staging** | Stage / unstage one file; **stage all** / **unstage all** |
-| **Commit** | **Title + description** (subject + body), then refresh |
-| **Branch** | Current branch and **upstream** (`@{u}`) |
-| **Platform** | macOS-oriented Electrobun app; dev + canary build pipeline |
+| Area           | What works                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Repository** | `PATCHLINE_SOURCE` / `--source`, **or** **Open project** + **Choose folder** (no env)                                     |
+| **Changes**    | Staged vs unstaged lists from `git status --porcelain`                                                                    |
+| **Diffs**      | Per-file diff with **unified** or **split** layout ([`@git-diff-view`](https://github.com/MrWangJustToSay/git-diff-view)) |
+| **Staging**    | Stage / unstage one file; **stage all** / **unstage all**                                                                 |
+| **Commit**     | **Title + description** (subject + body), then refresh                                                                    |
+| **Branch**     | Current branch and **upstream** (`@{u}`)                                                                                  |
+| **Platform**   | macOS-oriented Electrobun app; dev + canary build pipeline                                                                |
 
 ---
 
 ## Incoming / not yet
 
-| | |
-| :--- | :--- |
-| **Git worktrees** | Opening or switching worktrees inside the app |
-| **Multiple projects** | In-app project picker / several roots without restart |
-| **Broader Git** | Push, pull, merge, rebase, branches UI, remote management, etc. |
+|                        |                                                                        |
+| :--------------------- | :--------------------------------------------------------------------- |
+| **Git worktrees**      | Opening or switching worktrees inside the app                          |
+| **Multiple projects**  | In-app multi-root / several open projects without restart              |
+| **Broader Git**        | Push, pull, merge, rebase, branches UI, remote management, etc.        |
 | **File tree / editor** | Full repo browser and in-app editing were intentionally trimmed for v1 |
 
-*Roadmap is informal — PRs welcome for the gaps you care about.*
+_Roadmap is informal — PRs welcome for the gaps you care about._
 
 ---
 
 ## Why Patchline? (technical)
 
-| | |
-| :--- | :--- |
+|                  |                                                                                                                                                   |
+| :--------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Main process** | [Bun](https://bun.sh) + [Electrobun](https://blackboard.sh/electrobun/) — native window, Git via [simple-git](https://github.com/steveukx/git-js) |
-| **UI** | [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com) + shadcn-style components |
-| **Dev UX** | [Vite](https://vitejs.dev) HMR for instant UI feedback while you iterate |
+| **UI**           | [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com) + shadcn-style components                                                    |
+| **Dev UX**       | [Vite](https://vitejs.dev) HMR for instant UI feedback while you iterate                                                                          |
 
 ---
 
 ## Quick start
 
-**Prerequisites:** [Bun](https://bun.sh) installed.
+**Prerequisites:** [Bun](https://bun.sh) install.
 
 ```bash
 git clone <repo-url>
@@ -88,23 +88,71 @@ cd patchline
 bun install
 ```
 
-Point the app at a repository on your machine:
+### Opening a repository
+
+**Verified behavior (dev and production builds):** if `PATCHLINE_SOURCE` is set when the process starts, that repo opens immediately. If not, you get **Open project** and a native **Choose folder…** sheet (must be a directory containing `.git`).
+
+**Option A — environment variable**  
+Best for scripts, agents, and “always this repo”. To dogfood on **this** repository:
 
 ```bash
-export PATCHLINE_SOURCE=/absolute/path/to/your/repo
+cd /path/to/patchline   # your checkout of this repo
+export PATCHLINE_SOURCE="$PWD"
 bun run patchline:hmr
 ```
 
-The launcher script [`patchline.ts`](./patchline.ts) can also pass `--source` and optional `--hmr` — see its header comments.
+Use any other checkout path for a different project.
+
+**Option B — no env var**  
+From the clone root:
+
+```bash
+bun run patchline:hmr
+# or: bun patchline.ts --hmr   (omit --source)
+```
+
+The launcher [`patchline.ts`](./patchline.ts) only injects `PATCHLINE_SOURCE` when you pass `--source` (e.g. `bun patchline.ts --source "$PWD" --hmr`). If you omit `--source`, it **clears** inherited `PATCHLINE_SOURCE` in the child process so you don’t accidentally open the wrong tree.
+
+### Claude Code (and other agents)
+
+Point Patchline at the **same** working tree the agent uses, then use Patchline for diffs, staging, and commits:
+
+```bash
+cd /path/to/patchline   # or whatever project the agent is editing
+export PATCHLINE_SOURCE="$PWD"
+bun run patchline:hmr
+```
+
+---
+
+## Screenshots
+
+Assets live in [`screenshots/`](./screenshots/).
+
+**Open project** (no `PATCHLINE_SOURCE` — **Choose folder** flow)
+
+![Open project](screenshots/openproject.png)
+
+**Unified diff**
+
+![Unified diff](screenshots/unifieddiff.png)
+
+**Split diff**
+
+![Split diff](screenshots/splitdiff.png)
+
+**Commit dialog**
+
+![Commit dialog](screenshots/commitdialog.png)
 
 ---
 
 ## Development
 
-| Command | What it does |
-|--------|----------------|
+| Command                 | What it does                                                               |
+| ----------------------- | -------------------------------------------------------------------------- |
 | `bun run patchline:hmr` | **Recommended** — Vite on `:5173` + Electrobun; hot reload for the webview |
-| `bun run dev` | Electrobun only (expects built assets; run `vite build` first if needed) |
+| `bun run dev`           | Electrobun only (expects built assets; run `vite build` first if needed)   |
 
 ---
 
@@ -114,22 +162,29 @@ The launcher script [`patchline.ts`](./patchline.ts) can also pass `--source` an
 bun run build
 ```
 
-Runs **Vite production** (`dist/`) then **Electrobun** (`--env=canary`). Outputs depend on your OS/arch:
+Runs **Vite production** (`dist/`) then **Electrobun** (`--env=canary`). The `.app` uses the same Bun main as dev (`src/bun/index.ts`). Outputs depend on your OS/arch:
 
-| Output | Typical location |
-|--------|------------------|
+| Output          | Typical location                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
 | **.app bundle** | `build/canary-macos-arm64/Patchline-canary.app` (folder name may include `linux` / `win` on other platforms) |
-| **Installer** | `artifacts/canary-macos-arm64-Patchline-canary.dmg` (+ `.tar.zst` update payload) |
+| **Installer**   | `artifacts/canary-macos-arm64-Patchline-canary.dmg` (+ `.tar.zst` update payload)                            |
 
-**Run the built app** (still needs a repo path):
+**Run the built app** — same rules as dev: optional env → repo opens immediately; no env → **Open project** / **Choose folder**.
+
+- **Double-click** the app or `open Patchline-canary.app` → folder picker (no `PATCHLINE_SOURCE`).
+- **Open this repo in Patchline** after a local build (path to `.app` may differ by arch / name):
 
 ```bash
-# macOS — from the project root after a successful build
-PATCHLINE_SOURCE=/absolute/path/to/a/git/repo \
-  open "build/canary-macos-arm64/Patchline-canary.app"
+cd /path/to/patchline
+open --env PATCHLINE_SOURCE="$PWD" \
+  "build/canary-macos-arm64/Patchline-canary.app"
 ```
 
-Or open the `.dmg` in `artifacts/`, drag **Patchline** to Applications, then launch with `PATCHLINE_SOURCE` set (e.g. via the `open` line above for a one-off).
+**macOS note:** Prefixing the command (`VAR=value open …`) often **does not** pass environment variables into a GUI `.app`. Use `open --env PATCHLINE_SOURCE=/path` as above.
+
+**Tip:** If you already launched Patchline with env vars and want a **second** instance without them (to see **Choose folder**), use `open -n /path/to/Patchline-canary.app` so macOS starts a new process.
+
+Install from the `.dmg` in `artifacts/` if you prefer; drag **Patchline** to Applications, then use Finder or the `open` / `open --env` patterns above.
 
 > `bun run build:canary` is the same as `bun run build`.
 
@@ -144,13 +199,14 @@ src/
 └── shared/types.ts       # Shared RPC contracts (main ↔ webview)
 electrobun.config.ts      # App identity, bundle id, copy paths
 vite.config.ts            # Vite bundle for mainview
-patchline.ts              # Dev launcher (--source, --hmr)
+patchline.ts              # Dev launcher (`--source` optional, `--hmr`)
+screenshots/              # README gallery
 ```
 
-| Customize | Where |
-|-----------|--------|
-| Window, Git, RPC | `src/bun/index.ts` |
-| UI & layout | `src/mainview/` |
+| Customize            | Where                                  |
+| -------------------- | -------------------------------------- |
+| Window, Git, RPC     | `src/bun/index.ts`                     |
+| UI & layout          | `src/mainview/`                        |
 | App name & bundle id | `electrobun.config.ts`, `package.json` |
 
 ---

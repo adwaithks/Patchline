@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DiffViewer } from "@/components/diff-viewer";
+import { OpenProjectScreen } from "@/components/open-project-screen";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -8,8 +9,12 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SidebarGitProvider } from "@/context/sidebar-git-context";
+import {
+	SidebarGitProvider,
+	useSidebarGit,
+} from "@/context/sidebar-git-context";
 import { useWorkspace, WorkspaceProvider } from "@/context/workspace-context";
+import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { DiffLayoutMode } from "@/types/diff-layout";
 
 function AppContent() {
@@ -28,7 +33,9 @@ function AppContent() {
 			>
 				<SidebarTrigger className="-ml-1 electrobun-webkit-app-region-no-drag shrink-0" />
 				<span className="text-xs text-muted-foreground truncate select-none min-w-0 flex-1 direction-rtl">
-					{selectedFile?.path ?? sourcePath ?? "Select a file to view"}
+					{selectedFile?.path ??
+						sourcePath ??
+						"Select a file to view"}
 				</span>
 				{selectedFile ? (
 					<Tabs
@@ -68,14 +75,44 @@ function AppContent() {
 	);
 }
 
+function AppShell() {
+	const { data, loading, error, refresh } = useSidebarGit();
+	const { selectFile } = useWorkspace();
+	const rpc = getPatchlineRPC();
+
+	const needsOpen =
+		Boolean(rpc) &&
+		!loading &&
+		data !== null &&
+		data.sourcePath === null;
+
+	if (needsOpen) {
+		return (
+			<OpenProjectScreen
+				gitLoadError={error}
+				onOpened={async () => {
+					selectFile(null);
+					await refresh();
+				}}
+			/>
+		);
+	}
+
+	return (
+		<>
+			<AppSidebar />
+			<AppContent />
+		</>
+	);
+}
+
 function App() {
 	return (
 		<WorkspaceProvider>
 			<SidebarProvider>
 				<SidebarGitProvider>
-					<AppSidebar />
+					<AppShell />
 				</SidebarGitProvider>
-				<AppContent />
 			</SidebarProvider>
 		</WorkspaceProvider>
 	);

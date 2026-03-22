@@ -28,7 +28,13 @@ export function SidebarGitProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		const p = projectData.data?.sourcePath;
-		if (p && p !== "(dev preview)") setSourcePath(p);
+		if (p === undefined) return;
+		if (p === "(dev preview)") return;
+		if (p === null) {
+			setSourcePath(null);
+			return;
+		}
+		setSourcePath(p);
 	}, [projectData.data?.sourcePath, setSourcePath]);
 
 	return (

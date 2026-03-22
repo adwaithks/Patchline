@@ -9,9 +9,14 @@ import type {
 export type PatchlineRpcClient = {
 	request: {
 		getProjectData: () => Promise<{
-			sourcePath: string;
+			sourcePath: string | null;
 			changes: FileChange[];
 			branch: BranchInfo;
+		}>;
+		openProjectFolder: () => Promise<{
+			ok: boolean;
+			path: string | null;
+			error: string | null;
 		}>;
 		getFileDiff: (params: {
 			filePath: string;
