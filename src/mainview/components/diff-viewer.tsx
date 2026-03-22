@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { DiffView, DiffModeEnum } from "@git-diff-view/react";
 import "@git-diff-view/react/styles/diff-view-pure.css";
 import type { DiffLayoutMode } from "@/types/diff-layout";
-import { getGeodesicRPC } from "@/lib/geodesic-rpc";
+import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { FileDiff, SelectedFileChange } from "../../shared/types";
 
-const LOG = "[geodesic:webview]";
+const LOG = "[patchline:webview]";
 
 interface DiffViewerProps {
 	file: SelectedFileChange;
@@ -28,9 +28,9 @@ export function DiffViewer({ file, layout }: DiffViewerProps) {
 
 		async function load() {
 			try {
-				const rpc = getGeodesicRPC();
+				const rpc = getPatchlineRPC();
 				if (!rpc) {
-					console.warn(`${LOG} DiffViewer: __geodesicRPC missing`);
+					console.warn(`${LOG} DiffViewer: __patchlineRPC missing`);
 					setError("RPC not available");
 					return;
 				}

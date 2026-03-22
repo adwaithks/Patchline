@@ -6,7 +6,7 @@ import type {
 } from "../../shared/types";
 
 /** Webview client that calls Bun-side RPC request handlers */
-export type GeodesicRpcClient = {
+export type PatchlineRpcClient = {
 	request: {
 		getProjectData: () => Promise<{
 			sourcePath: string;
@@ -30,16 +30,16 @@ export type GeodesicRpcClient = {
 
 declare global {
 	interface Window {
-		__geodesicRPC?: GeodesicRpcClient;
+		__patchlineRPC?: PatchlineRpcClient;
 	}
 }
 
-/** Returns the Electroview RPC bridge when running inside Geodesic; otherwise `undefined`. */
-export function getGeodesicRPC(): GeodesicRpcClient | undefined {
-	return window.__geodesicRPC;
+/** Returns the Electroview RPC bridge when running inside Patchline; otherwise `undefined`. */
+export function getPatchlineRPC(): PatchlineRpcClient | undefined {
+	return window.__patchlineRPC;
 }
 
-/** `true` when the webview can call Bun (same as `Boolean(getGeodesicRPC())`). */
-export function isGeodesicRpcAvailable(): boolean {
-	return getGeodesicRPC() !== undefined;
+/** `true` when the webview can call Bun (same as `Boolean(getPatchlineRPC())`). */
+export function isPatchlineRpcAvailable(): boolean {
+	return getPatchlineRPC() !== undefined;
 }

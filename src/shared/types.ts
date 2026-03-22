@@ -30,7 +30,7 @@ export type BranchInfo = {
 	detached: boolean;
 };
 
-export type GeodesicRPCType = {
+export type PatchlineRPCType = {
 	bun: RPCSchema<{
 		requests: {
 			getProjectData: {

@@ -22,7 +22,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
 	selectFile: () => {},
 });
 
-const LOG = "[geodesic:webview]";
+const LOG = "[patchline:webview]";
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
 	const [sourcePath, setSourcePathState] = useState<string | null>(null);

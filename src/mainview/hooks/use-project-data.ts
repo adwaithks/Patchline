@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { getGeodesicRPC } from "@/lib/geodesic-rpc";
+import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { FileChange, BranchInfo } from "../../shared/types";
 
-const LOG = "[geodesic:webview]";
+const LOG = "[patchline:webview]";
 
 export type ProjectData = {
 	sourcePath: string;
@@ -17,7 +17,7 @@ export function useProjectData() {
 
 	const load = useCallback(async () => {
 		try {
-			const rpc = getGeodesicRPC();
+			const rpc = getPatchlineRPC();
 			if (!rpc) {
 				setData({
 					sourcePath: "(dev preview)",
@@ -47,7 +47,7 @@ export function useProjectData() {
 
 	// Poll git snapshot (~1s + random 0–999ms jitter) — reduces lock alignment with other git calls.
 	useEffect(() => {
-		const rpc = getGeodesicRPC();
+		const rpc = getPatchlineRPC();
 		if (!rpc) return;
 		let cancelled = false;
 		let timeoutId: ReturnType<typeof setTimeout>;

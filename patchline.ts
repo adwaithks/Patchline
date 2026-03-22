@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Geodesic launcher
+ * Patchline launcher
  * Usage:
- *   bun geodesic.ts --source /path/to/project         # normal
- *   bun geodesic.ts --source /path/to/project --hmr   # with Vite HMR
+ *   bun patchline.ts --source /path/to/project         # normal
+ *   bun patchline.ts --source /path/to/project --hmr   # with Vite HMR
  */
 import { resolve } from "path";
 import { spawn } from "child_process";
@@ -15,9 +15,13 @@ const rawSource = sourceIdx !== -1 && args[sourceIdx + 1] ? args[sourceIdx + 1] 
 const sourcePath = resolve(rawSource);
 const hmr = args.includes("--hmr");
 
-const env = { ...process.env, GEODESIC_SOURCE: sourcePath };
+const env = {
+	...process.env,
+	PATCHLINE_SOURCE: sourcePath,
+	GEODESIC_SOURCE: sourcePath,
+};
 
-console.log(`Geodesic → ${sourcePath}${hmr ? " (HMR)" : ""}`);
+console.log(`Patchline → ${sourcePath}${hmr ? " (HMR)" : ""}`);
 
 if (hmr) {
 	// Run Vite dev server and electrobun dev in parallel
@@ -26,7 +30,11 @@ if (hmr) {
 	await Bun.sleep(1500);
 	const electrobun = spawn("bun", ["run", "start"], { stdio: "inherit", env, cwd: import.meta.dir });
 
-	const cleanup = () => { vite.kill(); electrobun.kill(); process.exit(); };
+	const cleanup = () => {
+		vite.kill();
+		electrobun.kill();
+		process.exit();
+	};
 	process.on("SIGINT", cleanup);
 	process.on("SIGTERM", cleanup);
 

@@ -1,9 +1,14 @@
-import { BrowserWindow, BrowserView, Updater } from "electrobun/bun";
+import {
+	ApplicationMenu,
+	BrowserWindow,
+	BrowserView,
+	Updater,
+} from "electrobun/bun";
 import { resolve, join } from "path";
 import { readFileSync } from "fs";
 import { simpleGit, type SimpleGit } from "simple-git";
 import type {
-	GeodesicRPCType,
+	PatchlineRPCType,
 	FileChange,
 	FileDiff,
 	DiffScope,
@@ -14,19 +19,20 @@ const DEV_SERVER_PORT = 5173;
 const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
 
 // Resolve source path
-// Usage:  GEODESIC_SOURCE=/my/project bun run start
+// Usage: PATCHLINE_SOURCE=/my/project bun run start (GEODESIC_SOURCE still accepted)
 function getSourcePath(): string {
-	const fromEnv = process.env.GEODESIC_SOURCE;
+	const fromEnv =
+		process.env.PATCHLINE_SOURCE ?? process.env.GEODESIC_SOURCE;
 	if (!fromEnv)
 		throw new Error(
-			"GEODESIC_SOURCE is not set. Usage: GEODESIC_SOURCE=/my/project bun run start",
+			"PATCHLINE_SOURCE is not set. Usage: PATCHLINE_SOURCE=/my/project bun run start (legacy: GEODESIC_SOURCE)",
 		);
 	return resolve(fromEnv);
 }
 
 const sourcePath = getSourcePath();
 
-const BLOG = "[geodesic:bun]";
+const BLOG = "[patchline:bun]";
 console.log(`${BLOG} process starting`, { sourcePath });
 
 /** One git instance for the open project (simple-git wraps the `git` CLI). */
@@ -230,7 +236,7 @@ async function getFileDiff(
 }
 
 // ---- RPC ----
-const rpc = BrowserView.defineRPC<GeodesicRPCType>({
+const rpc = BrowserView.defineRPC<PatchlineRPCType>({
 	maxRequestTime: 10000,
 	handlers: {
 		requests: {
@@ -288,10 +294,48 @@ async function getMainViewUrl(): Promise<string> {
 	return "views://mainview/index.html";
 }
 
+/** macOS menu bar: app name → Quit, plus Edit/Window for native roles (clipboard, minimize, etc.). */
+function setupApplicationMenu() {
+	ApplicationMenu.setApplicationMenu([
+		{
+			label: "Patchline",
+			submenu: [
+				{ role: "hide", accelerator: "Command+H" },
+				{ role: "hideOthers", accelerator: "Command+Option+H" },
+				{ role: "showAll" },
+				{ type: "divider" },
+				{ role: "quit", accelerator: "Command+Q" },
+			],
+		},
+		{
+			label: "Edit",
+			submenu: [
+				{ role: "undo" },
+				{ role: "redo" },
+				{ type: "divider" },
+				{ role: "cut" },
+				{ role: "copy" },
+				{ role: "paste" },
+				{ role: "delete" },
+				{ role: "selectAll" },
+			],
+		},
+		{
+			label: "Window",
+			submenu: [
+				{ role: "minimize" },
+				{ role: "zoom" },
+			],
+		},
+	]);
+}
+
 const url = await getMainViewUrl();
 
+setupApplicationMenu();
+
 new BrowserWindow({
-	title: `Geodesic — ${sourcePath}`,
+	title: `Patchline — ${sourcePath}`,
 	url,
 	titleBarStyle: "hiddenInset",
 	frame: {
@@ -303,4 +347,4 @@ new BrowserWindow({
 	rpc,
 });
 
-console.log(`Geodesic started — watching: ${sourcePath}`);
+console.log(`Patchline started — watching: ${sourcePath}`);

@@ -25,7 +25,7 @@ import { useSidebarGit } from "@/context/sidebar-git-context";
 import { useWorkspace } from "@/context/workspace-context";
 import { FileIcon } from "@/lib/file-icon";
 import { cn } from "@/lib/utils";
-import { getGeodesicRPC } from "@/lib/geodesic-rpc";
+import { getPatchlineRPC } from "@/lib/patchline-rpc";
 import type { DiffScope, FileChange } from "../../shared/types";
 
 /** Porcelain `D` in either column — file deleted in index and/or worktree. */
@@ -122,22 +122,22 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 	const [committing, setCommitting] = useState(false);
 
 	async function stage(f: FileChange) {
-		await getGeodesicRPC()?.request.stageFile({ filePath: f.path });
+		await getPatchlineRPC()?.request.stageFile({ filePath: f.path });
 		refresh();
 	}
 
 	async function unstage(f: FileChange) {
-		await getGeodesicRPC()?.request.unstageFile({ filePath: f.path });
+		await getPatchlineRPC()?.request.unstageFile({ filePath: f.path });
 		refresh();
 	}
 
 	async function stageAll() {
-		await getGeodesicRPC()?.request.stageAll();
+		await getPatchlineRPC()?.request.stageAll();
 		refresh();
 	}
 
 	async function unstageAll() {
-		await getGeodesicRPC()?.request.unstageAll();
+		await getPatchlineRPC()?.request.unstageAll();
 		refresh();
 	}
 
@@ -147,7 +147,7 @@ export function SidebarChanges({ changes }: SidebarChangesProps) {
 		if (!title) return;
 		setCommitting(true);
 		try {
-			const res = await getGeodesicRPC()?.request.commit({
+			const res = await getPatchlineRPC()?.request.commit({
 				title,
 				description: commitDescription,
 			});

@@ -2,9 +2,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
-import type { GeodesicRpcClient } from "@/lib/geodesic-rpc";
+import type { PatchlineRpcClient } from "@/lib/patchline-rpc";
 
-const LOG = "[geodesic:webview]";
+const LOG = "[patchline:webview]";
 
 async function init() {
 	console.log(`${LOG} init() start`, {
@@ -14,12 +14,12 @@ async function init() {
 	if ((window as any).__electrobunWebviewId) {
 		try {
 			const { Electroview } = await import("electrobun/view");
-			const rpc = Electroview.defineRPC<import("../shared/types").GeodesicRPCType>({
+			const rpc = Electroview.defineRPC<import("../shared/types").PatchlineRPCType>({
 				handlers: { requests: {}, messages: {} },
 			});
 			new Electroview({ rpc });
-			window.__geodesicRPC = rpc as GeodesicRpcClient;
-			console.log(`${LOG} RPC ready (Electroview + __geodesicRPC set)`);
+			window.__patchlineRPC = rpc as PatchlineRpcClient;
+			console.log(`${LOG} RPC ready (Electroview + __patchlineRPC set)`);
 		} catch (err) {
 			console.error(`${LOG} RPC bootstrap failed`, err);
 		}
