@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	SidebarGitProvider,
-	useSidebarGit,
+	useGitActions,
+	useGitSnapshot,
 } from "@/context/sidebar-git-context";
 import { useWorkspace, WorkspaceProvider } from "@/context/workspace-context";
 import { getPatchlineRPC } from "@/lib/patchline-rpc";
@@ -38,33 +39,62 @@ function pathRelativeToRepo(repoRoot: string, filePath: string): string {
 	return p;
 }
 
-function AppContent() {
+/** Subscribes to git snapshot only — re-renders on poll; keep out of `AppContent` / diff tree. */
+function InsetHeaderSubtitle() {
 	const { selectedFile } = useWorkspace();
-	const { data, loading, refresh } = useSidebarGit();
-	const { open } = useSidebar();
-	const rpc = getPatchlineRPC();
-	const [diffLayout, setDiffLayout] = useState<DiffLayoutMode>("unified");
+	const { data } = useGitSnapshot();
 
+	if (selectedFile) {
+		const repo = repoBasename(selectedFile.repoRoot);
+		const rel = pathRelativeToRepo(
+			selectedFile.repoRoot,
+			selectedFile.path,
+		);
+		return <>{`${repo}/${rel}`}</>;
+	}
+
+	const repos = data?.repos ?? [];
+	if (repos.length === 0) return <>Add a repository</>;
+	if (repos.length === 1) return <>{repos[0].root}</>;
+	return <>{`${repos.length} repositories`}</>;
+}
+
+/** Snapshot (loading) + stable actions — isolated so main column does not subscribe. */
+function AddRepositoryButton() {
+	const { loading } = useGitSnapshot();
+	const { refresh } = useGitActions();
+	const rpc = getPatchlineRPC();
+
+	if (!rpc) return null;
+
+	const patchline = rpc;
 	async function handleAddRepository() {
-		if (!rpc) return;
-		const res = await rpc.request.openProjectFolder();
+		const res = await patchline.request.openProjectFolder();
 		if (res.ok && res.paths.length > 0) await refresh();
 	}
 
-	const headerSubtitle = (() => {
-		if (selectedFile) {
-			const repo = repoBasename(selectedFile.repoRoot);
-			const rel = pathRelativeToRepo(
-				selectedFile.repoRoot,
-				selectedFile.path,
-			);
-			return `${repo}/${rel}`;
-		}
-		const repos = data?.repos ?? [];
-		if (repos.length === 0) return "Add a repository";
-		if (repos.length === 1) return repos[0].root;
-		return `${repos.length} repositories`;
-	})();
+	return (
+		<Button
+			type="button"
+			variant="ghost"
+			size="icon"
+			title="Add repository"
+			aria-label="Add repository"
+			className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+			disabled={loading}
+			onClick={() => void handleAddRepository()}
+		>
+			<FolderPlus className="size-4" strokeWidth={1.75} />
+		</Button>
+	);
+}
+
+/** No git snapshot — avoids re-rendering diff on poll. */
+function AppContent() {
+	const { selectedFile } = useWorkspace();
+	const { open } = useSidebar();
+	const rpc = getPatchlineRPC();
+	const [diffLayout, setDiffLayout] = useState<DiffLayoutMode>("unified");
 
 	return (
 		<SidebarInset className="flex flex-col h-svh overflow-hidden">
@@ -77,27 +107,11 @@ function AppContent() {
 			>
 				<SidebarTrigger className="-ml-1 electrobun-webkit-app-region-no-drag shrink-0" />
 				<span className="text-xs text-muted-foreground truncate select-none min-w-0 flex-1 direction-rtl">
-					{headerSubtitle}
+					<InsetHeaderSubtitle />
 				</span>
 				{rpc || selectedFile ? (
 					<div className="ml-auto flex shrink-0 items-center gap-1.5 electrobun-webkit-app-region-no-drag">
-						{rpc ? (
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								title="Add repository"
-								aria-label="Add repository"
-								className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-								disabled={loading}
-								onClick={() => void handleAddRepository()}
-							>
-								<FolderPlus
-									className="size-4"
-									strokeWidth={1.75}
-								/>
-							</Button>
-						) : null}
+						<AddRepositoryButton />
 						{selectedFile ? (
 							<Tabs
 								value={diffLayout}
@@ -138,11 +152,9 @@ function AppContent() {
 	);
 }
 
-console.log("AppContent");
-
-/** Subscribes to git poll; lives under `SidebarGitProvider` only so `AppContent` is not a descendant. */
 function SidebarGitColumn() {
-	const { data, loading, error, refresh } = useSidebarGit();
+	const { data, loading, error } = useGitSnapshot();
+	const { refresh } = useGitActions();
 	const { selectFile } = useWorkspace();
 	const rpc = getPatchlineRPC();
 

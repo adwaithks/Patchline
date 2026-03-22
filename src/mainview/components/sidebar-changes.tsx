@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useSidebarGit } from "@/context/sidebar-git-context";
+import { useGitActions } from "@/context/sidebar-git-context";
 import { useWorkspace } from "@/context/workspace-context";
 import { FileIcon } from "@/lib/file-icon";
 import { cn } from "@/lib/utils";
@@ -155,7 +155,7 @@ function FileList({
 }
 
 export function SidebarChanges({ repoRoot, changes }: SidebarChangesProps) {
-	const { refresh } = useSidebarGit();
+	const { refresh } = useGitActions();
 	const { selectFile } = useWorkspace();
 	const [commitOpen, setCommitOpen] = useState(false);
 	const [commitTitle, setCommitTitle] = useState("");

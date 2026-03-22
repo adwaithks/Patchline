@@ -12,7 +12,7 @@ import {
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { SidebarChanges } from "@/components/sidebar-changes";
-import { useSidebarGit } from "@/context/sidebar-git-context";
+import { useGitSnapshot } from "@/context/sidebar-git-context";
 import { cn } from "@/lib/utils";
 
 function folderLabel(absPath: string): string {
@@ -22,7 +22,7 @@ function folderLabel(absPath: string): string {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const { data, loading } = useSidebarGit();
+	const { data, loading } = useGitSnapshot();
 
 	return (
 		<Sidebar {...props}>

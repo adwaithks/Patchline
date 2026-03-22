@@ -59,7 +59,8 @@ If you want a **quick, lightweight code diff** tool — not another full Git GUI
 
 |                        |                                                                        |
 | :--------------------- | :--------------------------------------------------------------------- |
-| **Git worktrees**      | Opening or switching worktrees inside the app                          |
+| **Git worktrees**      | Open and switch [worktrees](https://git-scm.com/docs/git-worktree) in the app (today: use a normal clone checkout; see **Scope**) |
+| **Merge conflicts**    | Resolve conflicts here — navigate markers, pick hunks or ours/theirs, finish merge/rebase without leaving Patchline |
 | **Broader Git**        | Push, pull, merge, rebase, branches UI, remote management, etc.        |
 | **File tree / editor** | Full repo browser and in-app editing were intentionally trimmed for v1 |
 
